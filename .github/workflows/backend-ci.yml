@@ -14,29 +14,26 @@ concurrency:
   group: backend-ci-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  # Phase 0 阶段：pom.xml 尚未引入（P1-T01 才会落地）。
-  # 该 guard job 在 P0 防止整个 workflow 因缺少构建文件而红。
-  skeleton-guard:
-    name: P0 skeleton guard
-    runs-on: ubuntu-latest
-    if: hashFiles('pom.xml') == ''
-    steps:
-      - uses: actions/checkout@v4
-      - name: Notice
-        run: |
-          echo "::notice title=Phase 0::pom.xml 尚未引入；待 P1-T01 落地后启用 mvn verify。"
+# hashFiles() 在 job-level if 不可用，只能在 step-level if 用 → 全部 step 用 if 守护。
+# Phase 0 阶段 pom.xml 尚未引入（P1-T01 才落地），skeleton-guard step 会绿条通过。
+# pom.xml 一旦存在（P1-T01 之后），mvn verify 自动接管。
 
-  verify:
-    name: mvn verify (Java 21)
+jobs:
+  ci:
+    name: backend-ci
     runs-on: ubuntu-latest
-    if: hashFiles('pom.xml') != ''
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: P0 skeleton guard (no pom.xml yet)
+        if: hashFiles('pom.xml') == ''
+        run: |
+          echo "::notice title=Phase 0::pom.xml 尚未引入；待 P1-T01 落地后自动启用 mvn verify。"
+
       - name: Set up JDK 21 (Temurin)
+        if: hashFiles('pom.xml') != ''
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -44,19 +41,21 @@ jobs:
           cache: maven
 
       - name: Show toolchain
+        if: hashFiles('pom.xml') != ''
         run: |
           java -version
           mvn -v
 
       # ArchUnit + Testcontainers + Flyway 校验均跑在 verify 生命周期内：
       #   - ArchUnit 守护见 maildesk-domain/src/test/java/.../arch/
-      #   - Testcontainers 自动拉起 PG 16 (无需 docker service)
+      #   - Testcontainers 自动拉起 PG 16（无需 docker service）
       #   - Flyway migrate 在集成测试启动时执行
       - name: mvn -B verify
+        if: hashFiles('pom.xml') != ''
         run: mvn -B -ntp verify
 
       - name: Upload Surefire reports
-        if: failure()
+        if: failure() && hashFiles('pom.xml') != ''
         uses: actions/upload-artifact@v4
         with:
           name: surefire-reports
@@ -64,7 +63,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Failsafe reports
-        if: failure()
+        if: failure() && hashFiles('pom.xml') != ''
         uses: actions/upload-artifact@v4
         with:
           name: failsafe-reports
