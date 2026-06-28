@@ -1,0 +1,112 @@
+---
+description: maildesk 后端开发规则（核心硬约束摘要）
+globs: "**/*.java"
+alwaysApply: false
+---
+
+# 后端核心规则
+
+详细规则见仓库内：
+
+- `docs/standards/project-structure.md` — Maven 多模块工程结构与模块边界
+- `docs/standards/coding-standards.md` — Java 21 + Spring Boot 编码规范
+- `docs/standards/dev-workflow.md` — 需求 → 方案 → 实现 → Review → 测试 → 提交 全流程
+
+跨仓库规格见 `kol-mail-desk-v2-docs/specs/`，含架构（01）、后端设计（02）、Phase 计划（04）、Feature Parity（05）、OpenAPI 契约。
+
+## 硬约束（必须遵守，不可绕过）
+
+### 技术栈
+
+- Java 21 + Spring Boot 3.3 + Maven 多模块（`common` / `domain` / `infrastructure` / `integration` / `ai` / `application` / `api` / `worker`）
+- PostgreSQL 16 单数据源，**MyBatis-Plus 3.5+ + Flyway**（详见 ADR-006）
+- **禁止引入** JPA / Hibernate / hibernate-types / `spring-boot-starter-data-jpa` / Apollo
+
+### 模块依赖
+
+- 单向：`api / worker → application → domain ← integration / ai`；`infrastructure` 实现 `domain` 接口
+- `domain` 不依赖任何外部模块
+- 业务层禁止 `import com.google.api.*` / `com.lark.oapi.*`，必须通过 `domain` 接口
+- 由 ArchUnit 守护，违反编译失败
+
+### 分层
+
+- Controller 在 `maildesk-api`，业务逻辑在 `maildesk-application`
+- Controller 不直接调 Mapper / Integration / AI
+- 不返回 DO（数据库实体）给前端，使用 Response DTO
+
+### 数据库 / ORM
+
+- 统一使用 MyBatis-Plus：实体用 `@TableName` / `@TableId` / `@TableField` / `@TableLogic` / `@Version` 注解
+- Mapper 接口继承 `BaseMapper<T>`；简单 CRUD 用 `LambdaQueryWrapper`，禁止裸 `QueryWrapper`
+- 复杂 SQL 写在 `maildesk-infrastructure/src/main/resources/mapper/*.xml`
+- 所有 schema 变更通过 Flyway（`V{n}__{desc}.sql`），MyBatis-Plus 启动时不生成任何 DDL
+- SQL 参数化使用 `#{name}`，**禁止 `${name}`**（除白名单字段名/排序列外）
+- 业务代码**禁止直接使用 `JdbcTemplate`**（特殊场景例外，需注释说明）
+
+### 多租户
+
+- 所有业务表必须有 `tenant_id` 列
+- 由 `TenantLineInnerInterceptor` 自动注入查询和写入路径
+- **Mapper 中禁止手写 `WHERE tenant_id = ?`**
+- Service 层**禁止显式 set `tenant_id`**
+- Worker 任务执行前从消息 payload 重建 `TenantContext`，`finally` 清理
+
+### 集成边界
+
+- Gmail / 飞书 / AI 必须通过 `maildesk-domain` 接口注入
+- **飞书严格只读**，禁止调用任何写 API
+- **AI 永不自动发信**，所有 AI 输出仅作草稿，发送前必须人工确认
+- 外部调用必须有超时（默认 10s）+ 重试（最多 3 次 + 指数退避）
+
+### 安全
+
+- OAuth Token 必须 AES-256 加密存储（`integration_credentials.encrypted_payload`）
+- 敏感配置走环境变量 / Secrets Manager，**禁止写在 yml**
+- 日志禁止打印 token / refresh_token / 密钥 / 邮件正文 / AI Prompt 全文 / DB 连接串
+
+### 审计
+
+- 所有写操作必须写 audit log（`actions` 表，append-only）
+- 字段：`tenant_id` / `actor_user_id` / `action_type` / `target_type` / `target_id` / `metadata` / `created_at`
+- 使用 `@AuditAction` 注解 + AOP 切面自动织入；**不要把审计逻辑写在 `MetaObjectHandler`**（其职责仅限 `created_at` 等行级元字段）
+
+### 自动填充字段
+
+- `created_at` / `updated_at` / `created_by` / `updated_by` 由 `MetaObjectHandler` 自动填充
+- 软删除字段 `deleted_at` 由 `@TableLogic` 自动处理
+- 乐观锁 `version` 由 `OptimisticLockerInnerInterceptor` 自动处理
+- **Service 代码禁止显式 set 上述字段**
+
+### 事务
+
+- `@Transactional(rollbackFor = Exception.class)` 放在 Application Service 实现类的 public 方法
+- 事务中**禁止**远程 HTTP / Gmail / 飞书 / AI 调用、文件处理、大批量导出
+- 同步任务按页处理，每页独立事务
+
+### 测试
+
+- JUnit 5 + AssertJ + Mockito
+- Mapper / XML SQL 用 Testcontainers（PG + Redis），含 MyBatis-Plus Interceptor 链路验证
+- 不依赖真实 Gmail / 飞书 / Kimi 账号；fixture mock
+- ArchUnit 守护：禁止 `import jakarta.persistence.*` / `import org.hibernate.*` / `import org.springframework.jdbc.core.JdbcTemplate`（业务代码）
+
+### API 契约
+
+- 每次新增 / 修改接口必须同步更新 `kol-mail-desk-v2-docs/specs/api-contract-v1.yaml`
+- OpenAPI 是前后端唯一真实契约，前端类型从其生成
+- 不更新契约的 PR Review 不通过
+
+## 开发流程（10 步）
+
+需求 → 需求分析 → 技术方案 → 任务计划 → 实现 → Review → 单测 → 测试执行 → 文档更新 → Git 提交（Conventional Commits）→ 交付说明
+
+任一阶段未通过必须回到对应阶段修正，不跳过失败项。详见 `docs/standards/dev-workflow.md`。
+
+## 命名速查
+
+- 类：`WorkbenchService`、`GmailSyncServiceImpl`、`FeishuSheetClient`
+- 包：`com.lovart.maildesk.{module}.{subdomain}`
+- 常量：`DEFAULT_PAGE_SIZE`
+- 布尔：`is...` / `has...` / `can...`
+- 后缀：`Controller` / `Service` / `ServiceImpl` / `Mapper` / `DO` / `Request` / `Response` / `Dto` / `Enum` / `Config` / `Job` / `Client`

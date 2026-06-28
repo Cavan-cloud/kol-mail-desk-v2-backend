@@ -1,0 +1,55 @@
+# Dev-only 中间件编排：PostgreSQL 16 + Redis 7
+# 用法：docker compose -f docker-compose.dev.yml up -d
+# 停止：docker compose -f docker-compose.dev.yml down
+# 清空数据卷（注意：会清空本地 dev 数据）：docker compose -f docker-compose.dev.yml down -v
+#
+# 不要在生产用本文件。生产配置走 K8s manifests（Phase 6 引入）。
+
+name: maildesk-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: maildesk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: maildesk
+      POSTGRES_USER: maildesk
+      POSTGRES_PASSWORD: maildesk_local
+      # 强制使用 UTC，避免本地时区导致 timestamp 误差
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - maildesk_pg:/var/lib/postgresql/data
+      # Phase 1+ 在 maildesk-infrastructure 启动时通过 Flyway 自动建表
+      # 不在此挂 init-sql；schema 演进全部走 V{n}__*.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maildesk -d maildesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: maildesk-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - maildesk_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  maildesk_pg:
+    name: maildesk_pg_dev
+  maildesk_redis:
+    name: maildesk_redis_dev

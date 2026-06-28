@@ -1,0 +1,64 @@
+---
+description: kol-mail-desk-v2 后端全局规则（每次会话强制加载）
+alwaysApply: true
+---
+
+# 全局规则
+
+## 跨会话续接协议（必读 / 必更）
+
+**每次新会话开始，第一件事**：
+
+1. `Read /Users/chenkaifeng/code/kol-mail-desk-v2-docs/specs/STATUS.md`
+   - 确认当前 Phase
+   - 确认当前活跃 ticket
+   - 确认阻塞项
+2. `Read /Users/chenkaifeng/code/kol-mail-desk-v2-docs/specs/BACKLOG.md` 的当前活跃 ticket 详细条目
+3. 然后再开始执行任务
+
+**每次完成一个 ticket、解决阻塞、进入新 Phase**，必须同步更新三处：
+
+1. `kol-mail-desk-v2-docs/specs/STATUS.md`（最后更新时间 / 当前活跃 ticket / Phase 完成度）
+2. `kol-mail-desk-v2-docs/specs/BACKLOG.md`（对应 ticket 行状态符号 `⬜ → 🔄 → ✅`）
+3. `kol-mail-desk-v2-docs/specs/05-feature-parity.md`（如该 ticket 关联 feature，对应功能行 `[ ] → [✅]`）
+
+> 漏更新 STATUS / BACKLOG / feature-parity 是流程缺陷，PR Review 不通过。
+
+## 重构上下文
+
+- 这是 kol-mail-desk 全量重构的 v2 项目
+- 旧仓库 `/Users/chenkaifeng/code/kol-mail-desk` **只读参考**，禁止修改
+- 设计规格在 `/Users/chenkaifeng/code/kol-mail-desk-v2-docs/specs/`，写代码前必读
+- 本地启动 / 环境变量 / 外部账号清单见 `specs/SETUP.md`
+
+## 工作模式
+
+- 推荐用 `~/code/maildesk-v2.code-workspace`（multi-root workspace）打开项目，能同时看到 docs / backend / web 三个仓库
+- 单次会话尽量完成一个垂直切片：**OpenAPI 契约 → 后端实现 → 前端调用 → E2E**
+- 改后端 API → 同步改 `kol-mail-desk-v2-docs/specs/api-contract-v1.yaml` → 前端 `pnpm gen:api` 重生成类型
+- 三个文档同步是硬约束：STATUS.md / BACKLOG.md / 05-feature-parity.md
+
+## 语言约定
+
+- **用户可见**字符串：简体中文
+- 代码标识符、日志、注释（除非业务术语必要）：英文
+- 文档（specs / standards / ADR）：简体中文
+
+## 行为变更同步
+
+- 业务规则变更 → 更新对应 spec
+- API 变更 → 更新 `specs/api-contract-v1.yaml`
+- 架构 / 选型变更 → 新增 ADR（`specs/decisions/ADR-{n}-{slug}.md`）
+- 风险新增 → 更新 `specs/07-risks.md`
+
+## Phase 0 当前阶段约束
+
+- 仅做骨架 + Harness，不实现业务逻辑
+- 进入 Phase 1 前必须满足 `04-phases.md § Phase 1 进入准入`
+
+## Cursor 操作硬约束
+
+- 不在 `target/` / `node_modules/` / `.next/` 编辑
+- 不读写 `.env`、`.env.local` 等含密钥文件
+- 不主动 git push（除非用户明确请求）
+- 不擅自跨 ticket 扩大改动范围
