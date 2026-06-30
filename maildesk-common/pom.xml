@@ -19,5 +19,27 @@
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
         </dependency>
+
+        <!-- Shared TypeHandlers (JSONB / TEXT[] / PG ENUM) need MyBatis BaseTypeHandler.
+             mybatis-plus-core transitively pulls in mybatis-core; provided so we do not
+             force the rest of the module graph to expose mybatis at runtime. -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- JsonbTypeHandler serializes via Jackson. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- PGobject for JSONB / PG ENUM round-trips. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>

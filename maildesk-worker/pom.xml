@@ -19,6 +19,14 @@
             <groupId>com.lovart</groupId>
             <artifactId>maildesk-application</artifactId>
         </dependency>
+        <!-- Runtime: same wiring as maildesk-api — Worker needs DataSource,
+             MyBatis-Plus interceptors, AuditFieldFiller, Redis, and the
+             TokenEncryptor / SessionTokenService impls when it dispatches mail
+             on behalf of a user. -->
+        <dependency>
+            <groupId>com.lovart</groupId>
+            <artifactId>maildesk-infrastructure</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
@@ -26,6 +34,31 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- SeedRunner needs ScriptUtils (spring-jdbc) + an active DataSource.
+             starter-jdbc is already on the transitive path via mybatis-plus,
+             but we declare it explicitly so the worker module owns its dep. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -38,6 +71,19 @@
                     <execution>
                         <goals>
                             <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- *IT tests (e.g. SeedRunnerIT) run in the verify phase. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
                         </goals>
                     </execution>
                 </executions>

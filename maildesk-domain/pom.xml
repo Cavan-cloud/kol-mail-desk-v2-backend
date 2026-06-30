@@ -23,6 +23,12 @@
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-annotation</artifactId>
         </dependency>
+        <!-- BaseMapper<T> + IPage live in mybatis-plus-core. Mappers in domain
+             extend BaseMapper, so we need core on the compile classpath. -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-core</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.tngtech.archunit</groupId>

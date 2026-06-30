@@ -1,0 +1,22 @@
+# Activated by `spring.profiles.active=seed`. Loads db/seed/*.sql via SeedRunner.
+#
+# Local usage:
+#   mvn -B -pl maildesk-worker spring-boot:run -Dspring-boot.run.profiles=seed
+#   mvn -B -pl maildesk-worker spring-boot:run -Dspring-boot.run.profiles=seed -Dspring-boot.run.arguments=--maildesk.seed.reset=true
+#
+# DEV-ONLY. SeedRunner is @Profile("seed"), so prod / default bundles never load it.
+
+maildesk:
+  seed:
+    # When true, runs db/seed/dev-reset.sql before loading the inserts.
+    reset: ${MAILDESK_SEED_RESET:false}
+    # When true (default), the worker exits after the seed finishes — convenient
+    # for one-shot CLI usage. Tests override to false to keep the context alive
+    # for assertions.
+    exit-after: ${MAILDESK_SEED_EXIT_AFTER:true}
+
+# Scheduler / job classes the worker would otherwise pick up are not relevant
+# in seed mode — they will run with whatever beans they auto-wire to.
+logging:
+  level:
+    com.lovart.maildesk.worker.seed: INFO
