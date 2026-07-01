@@ -3,7 +3,9 @@ package com.lovart.maildesk.application.profile;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lovart.maildesk.application.dto.ProfileDto;
 import com.lovart.maildesk.application.dto.TeamProfileUpdateRequest;
+import com.lovart.maildesk.application.dto.TeamProfileUpdateResponse;
 import com.lovart.maildesk.application.support.EntityMappers;
+import com.lovart.maildesk.application.team.TeamApplicationService;
 import com.lovart.maildesk.common.enums.UserRole;
 import com.lovart.maildesk.common.enums.UserStatus;
 import com.lovart.maildesk.common.exception.BusinessException;
@@ -24,14 +26,19 @@ public class ProfileApplicationService {
 
     private final ProfileMapper profiles;
     private final IntegrationCredentialMapper credentials;
+    private final TeamApplicationService teamService;
 
-    public ProfileApplicationService(ProfileMapper profiles, IntegrationCredentialMapper credentials) {
+    public ProfileApplicationService(
+            ProfileMapper profiles,
+            IntegrationCredentialMapper credentials,
+            TeamApplicationService teamService) {
         this.profiles = profiles;
         this.credentials = credentials;
+        this.teamService = teamService;
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ProfileDto updateOwnProfile(UUID userId, TeamProfileUpdateRequest request) {
+    public TeamProfileUpdateResponse updateOwnProfile(UUID userId, TeamProfileUpdateRequest request) {
         ProfileDO profile = profiles.selectById(userId);
         if (profile == null) {
             throw new BusinessException("NOT_FOUND", "用户资料不存在");
@@ -58,7 +65,9 @@ public class ProfileApplicationService {
         }
 
         profiles.updateById(profile);
-        return EntityMappers.toProfileDto(profile, hasGmailCredential(userId));
+        ProfileDto dto = EntityMappers.toProfileDto(profile, hasGmailCredential(userId));
+        int kolsAssigned = teamService.assignKolsByOperatorName(userId, profile.getFeishuOperatorName());
+        return new TeamProfileUpdateResponse(dto, kolsAssigned);
     }
 
     private UUID resolveMentorUserId(UUID userId, UserRole role, UUID mentorUserId) {

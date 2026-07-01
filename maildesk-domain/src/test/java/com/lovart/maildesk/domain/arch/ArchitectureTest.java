@@ -10,8 +10,8 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
  * Module boundary and ORM guard rules (ADR-006).
  * <p>
  * Runs during {@code maildesk-domain} test phase; scans classes on this module's classpath.
- * Cross-module rules (e.g. controller → mapper) take effect once {@code maildesk-api}
- * controllers land — full-repo scan can be added in {@code maildesk-api} test later.
+ * Cross-module rules (e.g. controller → mapper, Feishu read-only) run in
+ * {@code maildesk-api} tests where the full classpath is available (P2-T07).
  */
 @AnalyzeClasses(packages = "com.lovart.maildesk")
 class ArchitectureTest {

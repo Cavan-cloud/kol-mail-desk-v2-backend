@@ -89,3 +89,12 @@ maildesk:
   web:
     # Where to land users after a successful OAuth callback. Override per env.
     redirect-url: ${WEB_REDIRECT_URL:http://localhost:3000/}
+
+  feishu:
+    app-id: ${FEISHU_APP_ID:}
+    app-secret: ${FEISHU_APP_SECRET:}
+    kol-app-token: ${FEISHU_KOL_APP_TOKEN:}
+    kol-table-id: ${FEISHU_KOL_TABLE_ID:}
+    connect-timeout: 10s
+    read-timeout: 30s
+    max-retries: 3

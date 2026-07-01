@@ -20,6 +20,7 @@ public class GlobalExceptionHandler {
         HttpStatus status = switch (ex.errorCode()) {
             case "NOT_FOUND" -> HttpStatus.NOT_FOUND;
             case "FORBIDDEN" -> HttpStatus.FORBIDDEN;
+            case "CONFLICT" -> HttpStatus.CONFLICT;
             default -> HttpStatus.BAD_REQUEST;
         };
         return ResponseEntity.status(status).body(new ApiError(ex.errorCode(), ex.getMessage()));

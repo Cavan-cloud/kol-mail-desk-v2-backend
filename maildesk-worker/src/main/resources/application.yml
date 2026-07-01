@@ -16,6 +16,12 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
 management:
   endpoints:
     web:
@@ -37,3 +43,22 @@ mybatis-plus:
 
 maildesk:
   default-tenant-id: ${DEFAULT_TENANT_ID:00000000-0000-0000-0000-000000000001}
+
+  # AES-256-GCM master key — required at boot (shared with api).
+  token-encryption-key: ${TOKEN_ENCRYPTION_KEY:}
+
+  worker:
+    feishu-delta-sync:
+      enabled: ${FEISHU_DELTA_SYNC_ENABLED:true}
+      cron: "0 */30 * * * *"
+      max-records: 50
+      lock-ttl: 25m
+
+  feishu:
+    app-id: ${FEISHU_APP_ID:}
+    app-secret: ${FEISHU_APP_SECRET:}
+    kol-app-token: ${FEISHU_KOL_APP_TOKEN:}
+    kol-table-id: ${FEISHU_KOL_TABLE_ID:}
+    connect-timeout: 10s
+    read-timeout: 30s
+    max-retries: 3

@@ -1,10 +1,12 @@
 package com.lovart.maildesk.application.team;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.lovart.maildesk.application.dto.KolDto;
 import com.lovart.maildesk.application.dto.TeamMemberDto;
 import com.lovart.maildesk.application.dto.TeamMembersResponseDto;
 import com.lovart.maildesk.application.support.EntityMappers;
+import com.lovart.maildesk.common.feishu.FeishuCellExtractor;
 import com.lovart.maildesk.common.enums.UserStatus;
 import com.lovart.maildesk.domain.credential.entity.IntegrationCredentialDO;
 import com.lovart.maildesk.domain.credential.mapper.IntegrationCredentialMapper;
@@ -88,5 +90,26 @@ public class TeamApplicationService {
             map.put(member.getId(), count != null && count > 0);
         }
         return map;
+    }
+
+    /**
+     * Claims unowned KOL rows whose {@code feishu_operator_name} matches the saved profile value.
+     * Ported from legacy {@code app/api/team/profile/route.ts}.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int assignKolsByOperatorName(java.util.UUID userId, String feishuOperatorName) {
+        if (userId == null || feishuOperatorName == null || feishuOperatorName.isBlank()) {
+            return 0;
+        }
+        String normalized = FeishuCellExtractor.normalizeOperatorName(feishuOperatorName);
+        if (normalized.isEmpty()) {
+            return 0;
+        }
+        return kols.update(
+                null,
+                new UpdateWrapper<KolDO>()
+                        .set("owner_user_id", userId)
+                        .isNull("owner_user_id")
+                        .apply("lower(replace(trim(feishu_operator_name), '@', '')) = {0}", normalized));
     }
 }

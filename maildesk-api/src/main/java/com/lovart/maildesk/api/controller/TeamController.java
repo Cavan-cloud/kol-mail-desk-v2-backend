@@ -1,9 +1,9 @@
 package com.lovart.maildesk.api.controller;
 
 import com.lovart.maildesk.api.security.SessionPrincipal;
-import com.lovart.maildesk.application.dto.ProfileDto;
 import com.lovart.maildesk.application.dto.TeamMembersResponseDto;
 import com.lovart.maildesk.application.dto.TeamProfileUpdateRequest;
+import com.lovart.maildesk.application.dto.TeamProfileUpdateResponse;
 import com.lovart.maildesk.application.profile.ProfileApplicationService;
 import com.lovart.maildesk.application.team.TeamApplicationService;
 import jakarta.validation.Valid;
@@ -36,14 +36,14 @@ public class TeamController {
     }
 
     @PatchMapping("/profile")
-    public ResponseEntity<ProfileDto> updateProfile(
+    public ResponseEntity<TeamProfileUpdateResponse> updateProfile(
             @AuthenticationPrincipal SessionPrincipal principal,
             @Valid @RequestBody TeamProfileUpdateRequest request
     ) {
         if (principal == null) {
             return ResponseEntity.status(401).build();
         }
-        ProfileDto updated = profileService.updateOwnProfile(principal.userId(), request);
+        TeamProfileUpdateResponse updated = profileService.updateOwnProfile(principal.userId(), request);
         return ResponseEntity.ok(updated);
     }
 }

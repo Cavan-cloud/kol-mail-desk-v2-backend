@@ -1,0 +1,30 @@
+# Activated by `spring.profiles.active=backfill`. Runs FeishuBackfillRunner once and exits.
+#
+# Full import (every sheet tab, no row cap):
+#   mvn -B -pl maildesk-worker spring-boot:run -Dspring-boot.run.profiles=backfill
+#
+# Dry-run (parse + merge only, no DB writes):
+#   mvn -B -pl maildesk-worker spring-boot:run -Dspring-boot.run.profiles=backfill \
+#     -Dspring-boot.run.arguments=--maildesk.backfill.dry-run=true
+#
+# Recent-month window only (same as HTTP sync default):
+#   mvn -B -pl maildesk-worker spring-boot:run -Dspring-boot.run.profiles=backfill \
+#     -Dspring-boot.run.arguments=--maildesk.backfill.recent-months=2
+#
+# Requires FEISHU_* env vars + TOKEN_ENCRYPTION_KEY + PG/Redis (see SETUP.md).
+
+maildesk:
+  worker:
+    feishu-delta-sync:
+      enabled: false
+
+  backfill:
+    dry-run: ${FEISHU_BACKFILL_DRY_RUN:false}
+    recent-months: ${FEISHU_BACKFILL_RECENT_MONTHS:0}
+    exit-after: ${FEISHU_BACKFILL_EXIT_AFTER:true}
+    lock-ttl: ${FEISHU_BACKFILL_LOCK_TTL:60m}
+
+logging:
+  level:
+    com.lovart.maildesk.worker.feishu: INFO
+    com.lovart.maildesk.application.sync.feishu: INFO
