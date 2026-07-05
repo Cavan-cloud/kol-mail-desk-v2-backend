@@ -1,0 +1,36 @@
+# Example overrides for minikube / kind smoke tests.
+# Copy and fill secrets before: helm upgrade --install maildesk ./deploy/helm/maildesk -f deploy/helm/maildesk/values-local.example.yaml
+
+secrets:
+  create: true
+  tokenEncryptionKey: "REPLACE_WITH_openssl_rand_base64_32"
+  dbPassword: "maildesk_local"
+  redisPassword: ""
+  googleOauthClientId: ""
+  googleOauthClientSecret: ""
+
+database:
+  host: maildesk-postgres
+  user: maildesk
+  name: maildesk
+
+redis:
+  host: maildesk-redis
+
+config:
+  springProfilesActive: dev
+  corsAllowedOrigins: "http://localhost:3000"
+  webRedirectUrl: "http://localhost:3000/"
+  sessionCookieSecure: "false"
+
+api:
+  replicaCount: 1
+  image:
+    tag: local
+
+worker:
+  image:
+    tag: local
+
+ingress:
+  enabled: false

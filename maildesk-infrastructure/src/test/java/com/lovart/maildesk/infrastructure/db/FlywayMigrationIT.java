@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 class FlywayMigrationIT {
 
-    private static final int EXPECTED_MIGRATION_COUNT = 13;
+    private static final int EXPECTED_MIGRATION_COUNT = 14;
 
     private static final List<String> EXPECTED_TABLES = List.of(
             "tenants",
@@ -74,7 +74,7 @@ class FlywayMigrationIT {
 
             assertThat(result.success).isTrue();
             assertThat(result.migrationsExecuted).isEqualTo(EXPECTED_MIGRATION_COUNT);
-            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("13");
+            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("15");
 
             try (Connection conn = postgres.createConnection("")) {
                 assertExpectedTablesExist(conn);

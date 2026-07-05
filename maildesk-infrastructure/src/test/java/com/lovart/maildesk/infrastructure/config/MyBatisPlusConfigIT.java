@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.lovart.maildesk.common.context.TenantContext;
 import com.lovart.maildesk.common.enums.EmailDirection;
 import com.lovart.maildesk.common.enums.KolStage;
+import com.lovart.maildesk.common.enums.Platform;
 import com.lovart.maildesk.domain.email.entity.EmailDO;
 import com.lovart.maildesk.domain.email.mapper.EmailMapper;
 import com.lovart.maildesk.domain.kol.entity.KolDO;
@@ -327,6 +328,24 @@ class MyBatisPlusConfigIT {
         assertThat(fetched.getToEmails()).containsExactlyElementsOf(to);
         assertThat(fetched.getCcEmails()).containsExactlyElementsOf(cc);
         assertThat(fetched.getDirection()).isEqualTo(EmailDirection.OUTBOUND);
+    }
+
+    @Test
+    void platformTypeHandlerRoundTrips() {
+        KolDO kol = newKol("platform-" + UUID.randomUUID(), "frank");
+        kol.setPrimaryPlatform(Platform.TIKTOK);
+        kol.setAgreedPlatform(Platform.YOUTUBE);
+        kolMapper.insert(kol);
+
+        KolDO fetched = kolMapper.selectById(kol.getId());
+        assertThat(fetched.getPrimaryPlatform()).isEqualTo(Platform.TIKTOK);
+        assertThat(fetched.getAgreedPlatform()).isEqualTo(Platform.YOUTUBE);
+
+        fetched.setPrimaryPlatform(Platform.INSTAGRAM);
+        kolMapper.updateById(fetched);
+
+        KolDO refetched = kolMapper.selectById(kol.getId());
+        assertThat(refetched.getPrimaryPlatform()).isEqualTo(Platform.INSTAGRAM);
     }
 
     @Test

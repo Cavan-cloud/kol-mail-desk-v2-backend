@@ -1,6 +1,8 @@
 package com.lovart.maildesk.application.sync.feishu;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.lovart.maildesk.common.enums.KolStatus;
+import com.lovart.maildesk.common.enums.Platform;
 import com.lovart.maildesk.common.feishu.FeishuCellExtractor;
 import com.lovart.maildesk.domain.kol.entity.KolDO;
 import com.lovart.maildesk.domain.kol.mapper.KolMapper;
@@ -88,7 +90,7 @@ public class FeishuKolUpsertService {
 
         if (existing == null) {
             KolDO insert = new KolDO();
-            applyFeishuFields(insert, draft, operatorName, spreadsheetToken, now, ownerUserId);
+            applyFeishuFields(insert, draft, operatorName, spreadsheetToken, now, ownerUserId, false, false);
             kols.insert(insert);
             return new RowUpsertResult(UpsertOutcome.INSERTED, ownerMatched);
         }
@@ -96,10 +98,9 @@ public class FeishuKolUpsertService {
         KolDO patch = new KolDO();
         patch.setId(existing.getId());
         applyFeishuFields(patch, draft, operatorName, spreadsheetToken, now,
-                existing.getOwnerUserId() == null ? ownerUserId : null);
-        if (draft.stage() != null) {
-            patch.setStage(draft.stage());
-        }
+                existing.getOwnerUserId() == null ? ownerUserId : null,
+                Boolean.TRUE.equals(existing.getNameOverridden()),
+                Boolean.TRUE.equals(existing.getStageOverride()));
         kols.updateById(patch);
         return new RowUpsertResult(UpsertOutcome.UPDATED, ownerMatched);
     }
@@ -110,13 +111,17 @@ public class FeishuKolUpsertService {
             String operatorName,
             String spreadsheetToken,
             OffsetDateTime now,
-            UUID ownerUserId) {
+            UUID ownerUserId,
+            boolean preserveName,
+            boolean preserveStage) {
         row.setEmail(draft.email());
         row.setFeishuOperatorName(operatorName);
-        row.setName(draft.displayName());
+        if (!preserveName) {
+            row.setName(draft.displayName());
+        }
         row.setHandle(draft.handle());
         row.setPlatformHandle(draft.handle());
-        row.setPrimaryPlatform(draft.primaryPlatform());
+        row.setPrimaryPlatform(Platform.fromDbValue(draft.primaryPlatform()));
         row.setType(draft.type());
         row.setExternalProfileUrl(draft.profileUrl());
         row.setAgreedPrice(draft.agreedPrice());
@@ -125,8 +130,8 @@ public class FeishuKolUpsertService {
         row.setFeishuTableId(spreadsheetToken);
         row.setLastFeishuSyncedAt(now);
         row.setFeishuOutreachAt(draft.feishuOutreachAt());
-        row.setStatus("active");
-        if (draft.stage() != null) {
+        row.setStatus(KolStatus.ACTIVE);
+        if (!preserveStage && draft.stage() != null) {
             row.setStage(draft.stage());
         }
         if (ownerUserId != null) {

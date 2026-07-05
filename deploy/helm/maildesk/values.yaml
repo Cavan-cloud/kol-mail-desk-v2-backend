@@ -1,0 +1,215 @@
+# Default values for maildesk.
+# Production: override image tags, hosts, and point secrets.existingSecret at
+# your Secrets Manager / External Secrets object (see P6-T13).
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Non-sensitive runtime config (sensitive keys come from secrets.*).
+config:
+  springProfilesActive: prod
+  defaultTenantId: "00000000-0000-0000-0000-000000000001"
+  aiDefaultProvider: moonshot
+  moonshotBaseUrl: https://api.moonshot.cn/v1
+  deepseekBaseUrl: https://api.deepseek.com
+  corsAllowedOrigins: ""
+  webRedirectUrl: ""
+  sessionCookieSecure: "true"
+  sessionCookieSameSite: Lax
+
+database:
+  host: ""
+  port: 5432
+  name: maildesk
+  user: maildesk
+  # When secrets.create=false, password is read from this Secret key:
+  existingSecret: maildesk-secrets
+  passwordKey: db-password
+
+redis:
+  host: ""
+  port: 6379
+  existingSecret: maildesk-secrets
+  passwordKey: redis-password
+
+secrets:
+  # Set true only for local/minikube smoke; prod must use existingSecret (P6-T13).
+  create: false
+  name: maildesk-secrets
+  # Placeholder strings — replace via --set-file or External Secrets before deploy.
+  tokenEncryptionKey: ""
+  dbPassword: ""
+  redisPassword: ""
+  googleOauthClientId: ""
+  googleOauthClientSecret: ""
+  feishuAppId: ""
+  feishuAppSecret: ""
+  feishuKolAppToken: ""
+  feishuKolTableId: ""
+  moonshotApiKey: ""
+  deepseekApiKey: ""
+
+# Production: sync K8s Secret from cloud Secrets Manager via External Secrets Operator (P6-T13).
+# Requires cluster-installed ESO: https://external-secrets.io
+externalSecrets:
+  enabled: false
+  refreshInterval: 1h
+  secretStore:
+    create: true
+    name: "" # defaults to <release>-maildesk-secret-store
+    provider: aws # aws | gcpsm
+    aws:
+      region: ap-southeast-1
+    gcpsm:
+      projectID: ""
+      clusterLocation: ""
+      clusterName: ""
+  remoteRef:
+    # Single JSON blob in Secrets Manager (recommended). Property names match .env.example.
+    secretName: maildesk/prod
+  # Maps remote JSON property → K8s Secret data key (kebab-case, consumed by maildesk.secretEnv).
+  keys:
+    - remoteKey: TOKEN_ENCRYPTION_KEY
+      secretKey: token-encryption-key
+    - remoteKey: DB_PASSWORD
+      secretKey: db-password
+    - remoteKey: REDIS_PASSWORD
+      secretKey: redis-password
+    - remoteKey: GOOGLE_OAUTH_CLIENT_ID
+      secretKey: google-oauth-client-id
+    - remoteKey: GOOGLE_OAUTH_CLIENT_SECRET
+      secretKey: google-oauth-client-secret
+    - remoteKey: FEISHU_APP_ID
+      secretKey: feishu-app-id
+    - remoteKey: FEISHU_APP_SECRET
+      secretKey: feishu-app-secret
+    - remoteKey: FEISHU_KOL_APP_TOKEN
+      secretKey: feishu-kol-app-token
+    - remoteKey: FEISHU_KOL_TABLE_ID
+      secretKey: feishu-kol-table-id
+    - remoteKey: MOONSHOT_API_KEY
+      secretKey: moonshot-api-key
+    - remoteKey: DEEPSEEK_API_KEY
+      secretKey: deepseek-api-key
+
+api:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: maildesk-api
+    tag: "" # defaults to Chart.appVersion
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+    annotations: {}
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  probes:
+    liveness:
+      path: /actuator/health
+      initialDelaySeconds: 90
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /actuator/health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+worker:
+  enabled: true
+  # Keep at 1 unless all jobs use distributed locks (scheduled mail already does).
+  replicaCount: 1
+  image:
+    repository: maildesk-worker
+    tag: ""
+    pullPolicy: IfNotPresent
+  managementPort: 8081
+  service:
+    type: ClusterIP
+    port: 8081
+    annotations: {}
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  probes:
+    # Generous thresholds: sync jobs may run minutes; probe only JVM/actuator UP
+    # (see specs/07-risks.md R6 — future: Redis heartbeat probe).
+    liveness:
+      path: /actuator/health
+      initialDelaySeconds: 90
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 5
+    readiness:
+      path: /actuator/health
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: api.maildesk.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+metrics:
+  # Prometheus scrape annotations on pods (Prometheus Operator uses serviceMonitor instead).
+  prometheusScrape: true
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+
+alerts:
+  enabled: false
+  labels: {}
+  gmailSyncFailuresThreshold: 3
+  gmailSyncFailuresFor: 5m
+  aiFailureRateThreshold: 0.10
+  aiFailureRateFor: 10m
+  dispatchLagSecondsThreshold: 300
+  dispatchLagFor: 5m

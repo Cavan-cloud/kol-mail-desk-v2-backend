@@ -1,0 +1,75 @@
+# App overlay — builds API + Worker images on top of docker-compose.dev.yml middleware.
+#
+# Prerequisites:
+#   1. cp .env.example .env  (fill TOKEN_ENCRYPTION_KEY etc.)
+#   2. docker compose -f docker-compose.dev.yml -f docker-compose.app.yml up -d --build
+#
+# API:    http://localhost:8080/actuator/health
+# Worker: http://localhost:8081/actuator/health  (management port)
+
+name: maildesk-dev
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_MODULE: maildesk-api
+    image: maildesk-api:local
+    container_name: maildesk-api
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: maildesk
+      DB_USER: maildesk
+      DB_PASSWORD: maildesk_local
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?Set TOKEN_ENCRYPTION_KEY in .env — openssl rand -base64 32}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      WEB_REDIRECT_URL: ${WEB_REDIRECT_URL:-http://localhost:3000/}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_MODULE: maildesk-worker
+        HEALTH_CHECK_PORT: "8081"
+    image: maildesk-worker:local
+    container_name: maildesk-worker
+    restart: unless-stopped
+    ports:
+      - "${WORKER_MANAGEMENT_PORT:-8081}:8081"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: maildesk
+      DB_USER: maildesk
+      DB_PASSWORD: maildesk_local
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?Set TOKEN_ENCRYPTION_KEY in .env — openssl rand -base64 32}
+      MANAGEMENT_SERVER_PORT: 8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

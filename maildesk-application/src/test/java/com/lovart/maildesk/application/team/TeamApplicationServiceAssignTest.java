@@ -1,6 +1,7 @@
 package com.lovart.maildesk.application.team;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.lovart.maildesk.application.audit.AuditLogService;
+import com.lovart.maildesk.domain.audit.mapper.ActionMapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.lovart.maildesk.domain.kol.entity.KolDO;
 import com.lovart.maildesk.domain.kol.mapper.KolMapper;
@@ -30,12 +31,15 @@ class TeamApplicationServiceAssignTest {
     @Mock
     private com.lovart.maildesk.domain.credential.mapper.IntegrationCredentialMapper credentials;
 
+    @Mock
+    private ActionMapper actions;
+
     private TeamApplicationService service;
     private UUID userId;
 
     @BeforeEach
     void setUp() {
-        service = new TeamApplicationService(profiles, kols, credentials);
+        service = new TeamApplicationService(profiles, kols, credentials, new AuditLogService(actions));
         userId = UUID.randomUUID();
     }
 

@@ -1,6 +1,8 @@
 package com.lovart.maildesk.application.sync.feishu;
 
+import com.lovart.maildesk.application.audit.AuditLogService;
 import com.lovart.maildesk.application.dto.FeishuSyncStatusDto;
+import com.lovart.maildesk.domain.audit.mapper.ActionMapper;
 import com.lovart.maildesk.domain.feishu.FeishuClient;
 import com.lovart.maildesk.domain.feishu.FeishuSheetMeta;
 import com.lovart.maildesk.domain.kol.mapper.KolMapper;
@@ -29,13 +31,18 @@ class FeishuSyncApplicationServiceTest {
     @Mock
     private KolMapper kols;
 
+    @Mock
+    private ActionMapper actions;
+
+    private AuditLogService auditLog;
     private FeishuSyncApplicationService service;
 
     @BeforeEach
     void setUp() {
+        auditLog = new AuditLogService(actions);
         FeishuSyncService syncService =
                 new FeishuSyncService(feishuClient, profiles, new FeishuKolUpsertService(kols));
-        service = new FeishuSyncApplicationService(syncService);
+        service = new FeishuSyncApplicationService(syncService, auditLog);
     }
 
     @Test

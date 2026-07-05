@@ -1,11 +1,13 @@
 package com.lovart.maildesk.application.profile;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.lovart.maildesk.application.audit.AuditLogService;
 import com.lovart.maildesk.application.dto.ProfileDto;
 import com.lovart.maildesk.application.dto.TeamProfileUpdateRequest;
 import com.lovart.maildesk.application.dto.TeamProfileUpdateResponse;
 import com.lovart.maildesk.application.support.EntityMappers;
 import com.lovart.maildesk.application.team.TeamApplicationService;
+import com.lovart.maildesk.common.enums.ActionType;
 import com.lovart.maildesk.common.enums.UserRole;
 import com.lovart.maildesk.common.enums.UserStatus;
 import com.lovart.maildesk.common.exception.BusinessException;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -27,14 +30,25 @@ public class ProfileApplicationService {
     private final ProfileMapper profiles;
     private final IntegrationCredentialMapper credentials;
     private final TeamApplicationService teamService;
+    private final AuditLogService auditLog;
 
     public ProfileApplicationService(
             ProfileMapper profiles,
             IntegrationCredentialMapper credentials,
-            TeamApplicationService teamService) {
+            TeamApplicationService teamService,
+            AuditLogService auditLog) {
         this.profiles = profiles;
         this.credentials = credentials;
         this.teamService = teamService;
+        this.auditLog = auditLog;
+    }
+
+    public ProfileDto getCurrentProfile(UUID userId) {
+        ProfileDO profile = profiles.selectById(userId);
+        if (profile == null) {
+            throw new BusinessException("NOT_FOUND", "用户资料不存在");
+        }
+        return EntityMappers.toProfileDto(profile, hasGmailCredential(userId));
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -51,8 +65,15 @@ public class ProfileApplicationService {
         if (role == UserRole.MEMBER) {
             throw new BusinessException("VALIDATION_ERROR", "无效的角色");
         }
+        UserRole currentRole = UserRole.fromDbValue(profile.getRole());
+        if (role == UserRole.LEADER
+                && currentRole != UserRole.LEADER
+                && !UserStatus.PENDING_APPROVAL.dbValue().equals(profile.getStatus())) {
+            throw new BusinessException("FORBIDDEN", "只有 Leader 可以设置 Leader 角色");
+        }
 
         UUID mentorUserId = resolveMentorUserId(userId, role, request.mentorUserId());
+        boolean wasPendingApproval = UserStatus.PENDING_APPROVAL.dbValue().equals(profile.getStatus());
 
         profile.setDisplayName(request.displayName().trim());
         profile.setRole(role.dbValue());
@@ -65,8 +86,22 @@ public class ProfileApplicationService {
         }
 
         profiles.updateById(profile);
+        if (wasPendingApproval) {
+            auditLog.append(ActionType.USER_APPROVED, "user", userId);
+        }
         ProfileDto dto = EntityMappers.toProfileDto(profile, hasGmailCredential(userId));
         int kolsAssigned = teamService.assignKolsByOperatorName(userId, profile.getFeishuOperatorName());
+        if (kolsAssigned > 0) {
+            auditLog.append(
+                    ActionType.KOL_CLAIMED,
+                    "user",
+                    userId,
+                    Map.of(
+                            "count", kolsAssigned,
+                            "feishu_operator_name", profile.getFeishuOperatorName() == null
+                                    ? ""
+                                    : profile.getFeishuOperatorName()));
+        }
         return new TeamProfileUpdateResponse(dto, kolsAssigned);
     }
 
@@ -78,7 +113,7 @@ public class ProfileApplicationService {
             return null;
         }
         if (mentorUserId == null) {
-            return null;
+            throw new BusinessException("VALIDATION_ERROR", "实习生必须选择 mentor");
         }
         if (mentorUserId.equals(userId)) {
             throw new BusinessException("VALIDATION_ERROR", "不能将自己设为 mentor");

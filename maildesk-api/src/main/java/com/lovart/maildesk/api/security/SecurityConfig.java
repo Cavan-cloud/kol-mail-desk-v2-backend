@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -43,6 +44,8 @@ public class SecurityConfig {
             "/login/oauth2/**",
             "/api/v1/health",
             "/actuator/health",
+            "/actuator/health/**",
+            "/actuator/prometheus",
             "/error",
             "/swagger-ui/**",
             "/v3/api-docs/**"
@@ -81,8 +84,23 @@ public class SecurityConfig {
                 // state in HttpSession between /oauth2/authorization and the
                 // callback. STATELESS breaks the flow. Our app-level session is
                 // separately tracked via the Redis-backed MAILDESK_SESSION
-                // cookie; the servlet session is only used during the OAuth2
-                // round-trip and is empty afterwards.
+                // cookie.
+                //
+                // BUT: by default Spring Security ALSO persists the final
+                // OAuth2AuthenticationToken into that same HttpSession
+                // (SPRING_SECURITY_CONTEXT attribute) once oauth2Login succeeds.
+                // SecurityContextHolderFilter then restores that raw Google
+                // token from the JSESSIONID cookie on every later request,
+                // BEFORE SessionCookieAuthenticationFilter runs — which only
+                // binds MAILDESK_SESSION when the context is still empty. Net
+                // effect: after logging in once, the browser carries both
+                // JSESSIONID + MAILDESK_SESSION, the stale Google token wins,
+                // and every request looks unauthenticated (401 loop back to
+                // /login). NullSecurityContextRepository stops Spring Security
+                // from ever writing/reading that HttpSession-backed context —
+                // the authorization-request state above is unaffected since it
+                // is tracked by a separate AuthorizationRequestRepository.
+                .securityContext(ctx -> ctx.securityContextRepository(new NullSecurityContextRepository()))
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout.disable())

@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.Version;
+import com.lovart.maildesk.common.util.Uuids;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
@@ -61,7 +62,7 @@ public class IntegrationCredentialDO {
     private Integer version;
 
     public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    public void setId(Object id) { this.id = Uuids.parse(id); }
 
     public UUID getTenantId() { return tenantId; }
     public void setTenantId(UUID tenantId) { this.tenantId = tenantId; }

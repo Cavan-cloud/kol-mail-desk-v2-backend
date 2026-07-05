@@ -15,6 +15,7 @@ import com.lovart.maildesk.common.typehandler.EmailDirectionTypeHandler;
 import com.lovart.maildesk.common.typehandler.JsonbTypeHandler;
 import com.lovart.maildesk.common.typehandler.KolStageTypeHandler;
 import com.lovart.maildesk.common.typehandler.StringArrayTypeHandler;
+import com.lovart.maildesk.common.util.Uuids;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -103,6 +104,12 @@ public class EmailDO {
     @TableField(value = "ai_extracted_fields", typeHandler = JsonbTypeHandler.class)
     private JsonNode aiExtractedFields;
 
+    @TableField("ai_error")
+    private String aiError;
+
+    @TableField("ai_processed_at")
+    private OffsetDateTime aiProcessedAt;
+
     @TableField("is_read")
     private Boolean isRead;
 
@@ -136,8 +143,8 @@ public class EmailDO {
         return id;
     }
 
-    public void setId(UUID id) {
-        this.id = id;
+    public void setId(Object id) {
+        this.id = Uuids.parse(id);
     }
 
     public UUID getTenantId() {
@@ -306,6 +313,22 @@ public class EmailDO {
 
     public void setAiExtractedFields(JsonNode aiExtractedFields) {
         this.aiExtractedFields = aiExtractedFields;
+    }
+
+    public String getAiError() {
+        return aiError;
+    }
+
+    public void setAiError(String aiError) {
+        this.aiError = aiError;
+    }
+
+    public OffsetDateTime getAiProcessedAt() {
+        return aiProcessedAt;
+    }
+
+    public void setAiProcessedAt(OffsetDateTime aiProcessedAt) {
+        this.aiProcessedAt = aiProcessedAt;
     }
 
     public Boolean getIsRead() {

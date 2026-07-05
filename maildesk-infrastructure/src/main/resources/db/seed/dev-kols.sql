@@ -74,3 +74,10 @@ FROM (
     ('11111111-1111-1111-1111-000000000030','cody30@example.com','Cody Yu','@cody30','instagram',   'outreach',    NULL,                                  NULL,                       NULL,                       NULL,  '',   'feishu',  9,  false)
 ) AS seed(id, email, name, handle, platform, stage, owner, last_inbound, last_outbound, price, operator, source, days_ago, reply_resolved)
 ON CONFLICT (tenant_id, normalized_email, feishu_operator_name) DO NOTHING;
+
+-- Null-owner rows belong in the team pool (status unassigned, not active).
+UPDATE kols
+SET status = 'unassigned'::kol_status
+WHERE tenant_id = '00000000-0000-0000-0000-000000000001'::uuid
+  AND owner_user_id IS NULL
+  AND status = 'active'::kol_status;

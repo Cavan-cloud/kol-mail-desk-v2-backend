@@ -9,7 +9,12 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.Version;
 import com.lovart.maildesk.common.enums.KolStage;
+import com.lovart.maildesk.common.enums.KolStatus;
+import com.lovart.maildesk.common.enums.Platform;
+import com.lovart.maildesk.common.util.Uuids;
 import com.lovart.maildesk.common.typehandler.KolStageTypeHandler;
+import com.lovart.maildesk.common.typehandler.KolStatusTypeHandler;
+import com.lovart.maildesk.common.typehandler.PlatformTypeHandler;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -42,13 +47,14 @@ public class KolDO {
 
     private String handle;
 
-    @TableField("primary_platform")
-    private String primaryPlatform;
+    @TableField(value = "primary_platform", typeHandler = PlatformTypeHandler.class)
+    private Platform primaryPlatform;
 
     @TableField(value = "stage", typeHandler = KolStageTypeHandler.class)
     private KolStage stage;
 
-    private String status;
+    @TableField(value = "status", typeHandler = KolStatusTypeHandler.class)
+    private KolStatus status;
 
     @TableField("owner_user_id")
     private UUID ownerUserId;
@@ -62,8 +68,8 @@ public class KolDO {
     @TableField("agreed_price")
     private BigDecimal agreedPrice;
 
-    @TableField("agreed_platform")
-    private String agreedPlatform;
+    @TableField(value = "agreed_platform", typeHandler = PlatformTypeHandler.class)
+    private Platform agreedPlatform;
 
     @TableField("agreed_deadline")
     private LocalDate agreedDeadline;
@@ -99,6 +105,12 @@ public class KolDO {
     @TableField("reply_resolved")
     private Boolean replyResolved;
 
+    @TableField("name_overridden")
+    private Boolean nameOverridden;
+
+    @TableField("stage_override")
+    private Boolean stageOverride;
+
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private OffsetDateTime createdAt;
 
@@ -123,8 +135,8 @@ public class KolDO {
         return id;
     }
 
-    public void setId(UUID id) {
-        this.id = id;
+    public void setId(Object id) {
+        this.id = Uuids.parse(id);
     }
 
     public UUID getTenantId() {
@@ -159,11 +171,11 @@ public class KolDO {
         this.handle = handle;
     }
 
-    public String getPrimaryPlatform() {
+    public Platform getPrimaryPlatform() {
         return primaryPlatform;
     }
 
-    public void setPrimaryPlatform(String primaryPlatform) {
+    public void setPrimaryPlatform(Platform primaryPlatform) {
         this.primaryPlatform = primaryPlatform;
     }
 
@@ -175,11 +187,11 @@ public class KolDO {
         this.stage = stage;
     }
 
-    public String getStatus() {
+    public KolStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(KolStatus status) {
         this.status = status;
     }
 
@@ -215,11 +227,11 @@ public class KolDO {
         this.agreedPrice = agreedPrice;
     }
 
-    public String getAgreedPlatform() {
+    public Platform getAgreedPlatform() {
         return agreedPlatform;
     }
 
-    public void setAgreedPlatform(String agreedPlatform) {
+    public void setAgreedPlatform(Platform agreedPlatform) {
         this.agreedPlatform = agreedPlatform;
     }
 
@@ -317,6 +329,22 @@ public class KolDO {
 
     public void setReplyResolved(Boolean replyResolved) {
         this.replyResolved = replyResolved;
+    }
+
+    public Boolean getNameOverridden() {
+        return nameOverridden;
+    }
+
+    public void setNameOverridden(Boolean nameOverridden) {
+        this.nameOverridden = nameOverridden;
+    }
+
+    public Boolean getStageOverride() {
+        return stageOverride;
+    }
+
+    public void setStageOverride(Boolean stageOverride) {
+        this.stageOverride = stageOverride;
     }
 
     public OffsetDateTime getCreatedAt() {

@@ -1,0 +1,13 @@
+apiVersion: v2
+name: maildesk
+description: Kol Mail Desk v2 — API + Worker (Spring Boot)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+keywords:
+  - maildesk
+  - spring-boot
+
+maintainers:
+  - name: lovart

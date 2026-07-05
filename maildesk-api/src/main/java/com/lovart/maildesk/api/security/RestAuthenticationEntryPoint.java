@@ -29,6 +29,11 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        // response.getWriter() defaults to ISO-8859-1 unless the character
+        // encoding is set explicitly, which mangles the Chinese message into
+        // "?" replacement characters. setCharacterEncoding MUST be called
+        // before setContentType/getWriter().
+        response.setCharacterEncoding("UTF-8");
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         ApiError body = new ApiError("AUTH_REQUIRED", "请先登录");
         response.getWriter().write(mapper.writeValueAsString(body));

@@ -1,0 +1,61 @@
+# Maildesk production alert rules (P6-T09).
+# Loaded by deploy/prometheus/prometheus.yml and Helm PrometheusRule.
+#
+# Thresholds (see specs/BACKLOG.md P6-T09):
+#   - Gmail sync: >= 3 failures in 15m
+#   - AI failure rate: > 10% over 10m
+#   - Scheduled email dispatch lag: > 300s (5 min)
+
+groups:
+  - name: maildesk.alerts
+    rules:
+      - alert: MaildeskGmailSyncFailuresElevated
+        expr: sum(increase(gmail_sync_failed_total[15m])) >= 3
+        for: 5m
+        labels:
+          severity: warning
+          component: gmail-sync
+        annotations:
+          summary: Gmail 同步失败次数偏高
+          description: >-
+            过去 15 分钟内 Gmail 同步失败累计 {{ $value | printf "%.0f" }} 次（阈值 3）。
+            检查 integration_credentials / Google OAuth 与 Worker 日志。
+
+      - alert: MaildeskAiFailureRateHigh
+        expr: |
+          (
+            sum(rate(ai_invocation_total{outcome="failure"}[5m]))
+            / clamp_min(sum(rate(ai_invocation_total[5m])), 1e-9)
+          ) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          component: ai
+        annotations:
+          summary: AI 调用失败率超过 10%
+          description: >-
+            近 5 分钟 AI 失败率 {{ $value | humanizePercentage }}（阈值 10%）。
+            检查 Moonshot/DeepSeek 配额与 maildesk.ai 配置。
+
+      - alert: MaildeskScheduledEmailDispatchLagHigh
+        expr: |
+          max(scheduled_email_dispatch_lag_seconds{application="maildesk-worker"}) > 300
+        for: 5m
+        labels:
+          severity: critical
+          component: worker
+        annotations:
+          summary: 定时邮件派发滞后超过 5 分钟
+          description: >-
+            最 overdue 定时邮件已滞后 {{ $value | printf "%.0f" }} 秒。
+            检查 Worker ScheduledEmailDispatchJob、Redis 锁与 Gmail 发信。
+
+      - alert: MaildeskTargetDown
+        expr: up{job=~"maildesk-.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: Maildesk  scrape target 不可达
+          description: Prometheus 无法抓取 {{ $labels.job }}（{{ $labels.instance }}）。

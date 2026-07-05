@@ -1,0 +1,33 @@
+1. Get the API URL:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else if contains "NodePort" .Values.api.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "maildesk.fullname" . }}-api)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.api.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "maildesk.fullname" . }}-api
+{{- else }}
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "maildesk.fullname" . }}-api 8080:{{ .Values.api.service.port }}
+  echo "API (port-forward): http://127.0.0.1:8080"
+{{- end }}
+
+2. Health checks:
+   API:    /actuator/health on port {{ .Values.api.service.port }}
+   Worker: /actuator/health on port {{ .Values.worker.managementPort }} (management)
+
+3. Secrets:
+{{- if .Values.externalSecrets.enabled }}
+   External Secrets enabled → SecretStore {{ include "maildesk.secretStoreName" . }} syncs {{ .Values.externalSecrets.remoteRef.secretName }} → {{ .Values.secrets.name }}.
+   Verify: kubectl get externalsecret,secret -n {{ .Release.Namespace }}
+   Runbook: deploy/secrets/README.md
+{{- else if .Values.secrets.create }}
+   Using Helm-managed Secret {{ .Values.secrets.name }} (dev/minikube only).
+{{- else }}
+   Expecting existing Secret {{ .Values.secrets.name }} — enable externalSecrets or create Secret manually (see deploy/secrets/README.md).
+{{- end }}
+
+4. Worker replicas: keep {{ .Values.worker.replicaCount }} unless every job uses distributed locks (see specs/07-risks.md R7).

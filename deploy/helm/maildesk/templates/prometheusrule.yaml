@@ -1,0 +1,47 @@
+{{- if .Values.alerts.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "maildesk.fullname" . }}
+  labels:
+    {{- include "maildesk.labels" . | nindent 4 }}
+    {{- with .Values.alerts.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: maildesk.alerts
+      rules:
+        - alert: MaildeskGmailSyncFailuresElevated
+          expr: sum(increase(gmail_sync_failed_total[15m])) >= {{ .Values.alerts.gmailSyncFailuresThreshold }}
+          for: {{ .Values.alerts.gmailSyncFailuresFor }}
+          labels:
+            severity: warning
+            component: gmail-sync
+          annotations:
+            summary: Gmail 同步失败次数偏高
+            description: 过去 15 分钟内 Gmail 同步失败累计超过阈值。
+        - alert: MaildeskAiFailureRateHigh
+          expr: |
+            (
+              sum(rate(ai_invocation_total{outcome="failure"}[5m]))
+              / clamp_min(sum(rate(ai_invocation_total[5m])), 1e-9)
+            ) > {{ .Values.alerts.aiFailureRateThreshold }}
+          for: {{ .Values.alerts.aiFailureRateFor }}
+          labels:
+            severity: warning
+            component: ai
+          annotations:
+            summary: AI 调用失败率超过 10%
+            description: 近 5 分钟 AI 失败率持续高于阈值。
+        - alert: MaildeskScheduledEmailDispatchLagHigh
+          expr: |
+            max(scheduled_email_dispatch_lag_seconds{application="maildesk-worker"}) > {{ .Values.alerts.dispatchLagSecondsThreshold }}
+          for: {{ .Values.alerts.dispatchLagFor }}
+          labels:
+            severity: critical
+            component: worker
+          annotations:
+            summary: 定时邮件派发滞后超过 5 分钟
+            description: 最 overdue 定时邮件滞后秒数超过阈值。
+{{- end }}

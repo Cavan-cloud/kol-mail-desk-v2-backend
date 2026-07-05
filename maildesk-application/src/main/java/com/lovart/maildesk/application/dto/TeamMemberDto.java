@@ -14,6 +14,9 @@ public record TeamMemberDto(
         boolean gmailAuthorized,
         OffsetDateTime lastSyncedAt,
         OffsetDateTime createdAt,
-        int ownedKolCount
+        int ownedKolCount,
+        int activeKolCount,
+        int closedKolCount,
+        int stalledKolCount
 ) {
 }

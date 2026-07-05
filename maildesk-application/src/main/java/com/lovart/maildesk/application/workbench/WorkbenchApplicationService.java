@@ -11,6 +11,7 @@ import com.lovart.maildesk.application.support.StageCatalog;
 import com.lovart.maildesk.application.support.WorkbenchRules;
 import com.lovart.maildesk.common.enums.EmailDirection;
 import com.lovart.maildesk.common.enums.KolStage;
+import com.lovart.maildesk.common.enums.KolStatus;
 import com.lovart.maildesk.common.exception.BusinessException;
 import com.lovart.maildesk.domain.email.entity.EmailDO;
 import com.lovart.maildesk.domain.email.mapper.EmailMapper;
@@ -134,7 +135,7 @@ public class WorkbenchApplicationService {
         if ("mine".equals(viewMode)) {
             wrapper.eq(KolDO::getOwnerUserId, userId);
         } else if ("pool".equals(viewMode)) {
-            wrapper.in(KolDO::getStatus, "unassigned", "orphaned");
+            wrapper.in(KolDO::getStatus, KolStatus.UNASSIGNED, KolStatus.ORPHANED);
         }
     }
 

@@ -1,0 +1,25 @@
+# Maven / Java build output
+**/target/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Git / CI
+.git/
+.github/
+
+# Secrets — never bake into images
+.env
+.env.*
+!.env.example
+
+# Docs / editor rules (not needed at build time)
+docs/
+.cursor/
+README.md
+
+# Dev middleware compose only; app images use Dockerfile + docker-compose.app.yml
+docker-compose.dev.yml

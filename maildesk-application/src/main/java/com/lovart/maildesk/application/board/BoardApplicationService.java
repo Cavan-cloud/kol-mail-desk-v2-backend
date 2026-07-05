@@ -7,7 +7,10 @@ import com.lovart.maildesk.application.dto.BoardStageDistributionDto;
 import com.lovart.maildesk.application.dto.BoardSummaryDto;
 import com.lovart.maildesk.application.support.BoardWindow;
 import com.lovart.maildesk.application.support.StageCatalog;
+import com.lovart.maildesk.common.enums.EmailDirection;
 import com.lovart.maildesk.common.enums.KolStage;
+import com.lovart.maildesk.domain.email.entity.EmailDO;
+import com.lovart.maildesk.domain.email.mapper.EmailMapper;
 import com.lovart.maildesk.domain.kol.entity.KolDO;
 import com.lovart.maildesk.domain.kol.mapper.KolMapper;
 import org.springframework.stereotype.Service;
@@ -16,14 +19,25 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class BoardApplicationService {
 
-    private final KolMapper kols;
+    private static final List<KolStage> COOPERATION_STAGES = List.of(
+            KolStage.CONFIRMED,
+            KolStage.PRODUCING,
+            KolStage.REVIEWING,
+            KolStage.PUBLISHED,
+            KolStage.PAYING
+    );
 
-    public BoardApplicationService(KolMapper kols) {
+    private final KolMapper kols;
+    private final EmailMapper emails;
+
+    public BoardApplicationService(KolMapper kols, EmailMapper emails) {
         this.kols = kols;
+        this.emails = emails;
     }
 
     @Transactional(readOnly = true)
@@ -45,14 +59,17 @@ public class BoardApplicationService {
         }
 
         int total = scoped.size();
-        int active = (int) scoped.stream()
-                .filter(k -> !"declined".equals(k.getStatus()) && !"closed".equals(k.getStatus()))
-                .count();
-        int published = countStageAtLeast(snapshot, KolStage.PUBLISHED);
-        int paid = snapshot.getOrDefault(KolStage.PAYING, 0);
-        float conversion = total > 0 ? (float) paid / total : 0f;
+        int unreplied = (int) scoped.stream().filter(BoardApplicationService::needsReply).count();
+        int unreadEmails = countUnreadInboundEmails(scoped.stream().map(KolDO::getId).toList());
+        int cooperation = COOPERATION_STAGES.stream()
+                .mapToInt(stage -> snapshot.getOrDefault(stage, 0))
+                .sum();
 
-        BoardKpiDto kpi = new BoardKpiDto(total, active, published, paid, conversion);
+        int outreachCum = StageCatalog.cumulativeCount(snapshot, KolStage.OUTREACH);
+        int payingCum = StageCatalog.cumulativeCount(snapshot, KolStage.PAYING);
+        float conversion = outreachCum > 0 ? (float) payingCum / outreachCum : 0f;
+
+        BoardKpiDto kpi = new BoardKpiDto(total, unreplied, unreadEmails, cooperation, conversion);
 
         List<BoardFunnelStageDto> funnel = StageCatalog.FUNNEL_STAGES.stream()
                 .map(stage -> new BoardFunnelStageDto(
@@ -73,15 +90,31 @@ public class BoardApplicationService {
         return new BoardSummaryDto(window.raw(), kpi, funnel, distribution);
     }
 
-    private static int countStageAtLeast(Map<KolStage, Integer> snapshot, KolStage threshold) {
-        int idx = StageCatalog.FUNNEL_STAGES.indexOf(threshold);
-        if (idx < 0) {
-            return snapshot.getOrDefault(threshold, 0);
+    private int countUnreadInboundEmails(List<UUID> kolIds) {
+        if (kolIds.isEmpty()) {
+            return 0;
         }
-        int sum = 0;
-        for (int i = idx; i < StageCatalog.FUNNEL_STAGES.size(); i++) {
-            sum += snapshot.getOrDefault(StageCatalog.FUNNEL_STAGES.get(i), 0);
+        Long count = emails.selectCount(
+                new LambdaQueryWrapper<EmailDO>()
+                        .in(EmailDO::getKolId, kolIds)
+                        .eq(EmailDO::getDirection, EmailDirection.INBOUND)
+                        .eq(EmailDO::getIsRead, false));
+        return count == null ? 0 : count.intValue();
+    }
+
+    /**
+     * Needs reply: latest activity is inbound and not manually resolved.
+     */
+    private static boolean needsReply(KolDO kol) {
+        if (Boolean.TRUE.equals(kol.getReplyResolved())) {
+            return false;
         }
-        return sum;
+        if (kol.getLastInboundAt() == null) {
+            return false;
+        }
+        if (kol.getLastOutboundAt() != null && kol.getLastOutboundAt().isAfter(kol.getLastInboundAt())) {
+            return false;
+        }
+        return true;
     }
 }

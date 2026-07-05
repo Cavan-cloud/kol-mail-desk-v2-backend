@@ -7,6 +7,7 @@ import com.lovart.maildesk.domain.feishu.FeishuBitableRecord;
 import com.lovart.maildesk.domain.feishu.FeishuClient;
 import com.lovart.maildesk.domain.feishu.FeishuConfigCheckResult;
 import com.lovart.maildesk.domain.feishu.FeishuSheetMeta;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -40,6 +41,7 @@ public class FeishuClientImpl implements FeishuClient {
     private final ObjectMapper objectMapper;
     private final AtomicReference<CachedToken> tokenCache = new AtomicReference<>();
 
+    @Autowired
     public FeishuClientImpl(FeishuProperties properties, ObjectMapper objectMapper) {
         this(properties, objectMapper, buildRestTemplate(properties));
     }

@@ -1,6 +1,14 @@
 spring:
   application:
     name: maildesk-worker
+  config:
+    import: optional:classpath:application-observability.yml
+
+  ai:
+    openai:
+      api-key: disabled
+      chat:
+        enabled: false
 
   # See maildesk-api/src/main/resources/application.yml — same forward-looking
   # comment. Worker also excludes DataSourceAutoConfiguration until infrastructure
@@ -23,6 +31,10 @@ spring:
       password: ${REDIS_PASSWORD:}
 
 management:
+  # Worker has no spring-boot-starter-web; expose actuator on a dedicated port for
+  # Docker / K8s health probes (see docker-compose.app.yml).
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:8081}
   endpoints:
     web:
       exposure:
@@ -53,6 +65,16 @@ maildesk:
       cron: "0 */30 * * * *"
       max-records: 50
       lock-ttl: 25m
+    gmail-incremental-sync:
+      enabled: ${GMAIL_INCREMENTAL_SYNC_ENABLED:true}
+      cron: "0 */5 * * * *"
+      max-users-per-run: 20
+      lock-ttl: 4m
+    scheduled-email-dispatch:
+      enabled: ${SCHEDULED_EMAIL_DISPATCH_ENABLED:true}
+      cron: "0 * * * * *"
+      batch-size: 10
+      lock-ttl: 55s
 
   feishu:
     app-id: ${FEISHU_APP_ID:}
@@ -62,3 +84,38 @@ maildesk:
     connect-timeout: 10s
     read-timeout: 30s
     max-retries: 3
+
+  gmail:
+    client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+    client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+    connect-timeout: 10s
+    read-timeout: 30s
+    max-retries: 3
+
+  ai:
+    enabled: true
+    default-provider: ${AI_DEFAULT_PROVIDER:moonshot}
+    providers:
+      moonshot:
+        base-url: ${MOONSHOT_BASE_URL:https://api.moonshot.cn/v1}
+        api-key: ${MOONSHOT_API_KEY:}
+      deepseek:
+        base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+        api-key: ${DEEPSEEK_API_KEY:}
+    capabilities:
+      classify:
+        provider: moonshot
+        model: moonshot-v1-8k
+        fallback-provider: deepseek
+        fallback-model: deepseek-v4-flash
+      draft:
+        provider: moonshot
+        model: moonshot-v1-128k
+      check:
+        provider: moonshot
+        model: moonshot-v1-8k
+      translate:
+        provider: moonshot
+        model: moonshot-v1-8k
+        fallback-provider: deepseek
+        fallback-model: deepseek-v4-flash

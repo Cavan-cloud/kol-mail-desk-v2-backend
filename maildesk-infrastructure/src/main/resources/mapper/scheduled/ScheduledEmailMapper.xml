@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lovart.maildesk.domain.scheduled.mapper.ScheduledEmailMapper">
+
+    <resultMap id="ScheduledEmailResultMap"
+               type="com.lovart.maildesk.domain.scheduled.entity.ScheduledEmailDO"
+               autoMapping="true">
+        <result property="ccEmails" column="cc_emails"
+                typeHandler="com.lovart.maildesk.common.typehandler.StringArrayTypeHandler"/>
+    </resultMap>
+
+    <!-- PostgreSQL UPDATE … RETURNING is executed as a select in MyBatis. -->
+    <select id="claimDueBatch" resultMap="ScheduledEmailResultMap">
+        UPDATE scheduled_emails AS se
+        SET status = 'processing',
+            attempt_count = se.attempt_count + 1,
+            last_attempt_at = #{now},
+            updated_at = #{now}
+        FROM (
+            SELECT id
+            FROM scheduled_emails
+            WHERE deleted_at IS NULL
+              AND tenant_id = #{tenantId}
+              AND status IN ('scheduled', 'failed')
+              AND scheduled_at &lt;= #{now}
+              AND attempt_count &lt; 3
+              AND (
+                status = 'scheduled'
+                OR (
+                  status = 'failed'
+                  AND (
+                    last_attempt_at IS NULL
+                    OR last_attempt_at + (
+                      POWER(2::numeric, GREATEST(attempt_count - 1, 0))::int * INTERVAL '1 minute'
+                    ) &lt;= #{now}
+                  )
+                )
+              )
+            ORDER BY scheduled_at
+            LIMIT #{limit}
+            FOR UPDATE SKIP LOCKED
+        ) AS picked
+        WHERE se.id = picked.id
+        RETURNING se.*
+    </select>
+
+    <select id="selectMaxDispatchLagSeconds" resultType="java.lang.Double">
+        SELECT COALESCE(
+            EXTRACT(EPOCH FROM (#{now} - MIN(scheduled_at))),
+            0
+        )
+        FROM scheduled_emails
+        WHERE deleted_at IS NULL
+          AND tenant_id = #{tenantId}
+          AND status = 'scheduled'
+          AND scheduled_at &lt;= #{now}
+    </select>
+</mapper>

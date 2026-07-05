@@ -1,0 +1,22 @@
+{{- if .Values.worker.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "maildesk.fullname" . }}-worker
+  labels:
+    {{- include "maildesk.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+  {{- with .Values.worker.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.worker.service.type }}
+  ports:
+    - port: {{ .Values.worker.service.port }}
+      targetPort: management
+      protocol: TCP
+      name: management
+  selector:
+    {{- include "maildesk.worker.selectorLabels" . | nindent 4 }}
+{{- end }}

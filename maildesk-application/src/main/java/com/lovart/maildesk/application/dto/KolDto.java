@@ -25,6 +25,7 @@ public record KolDto(
         LocalDate agreedDeadline,
         String notes,
         boolean replyResolved,
+        boolean stageOverride,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {

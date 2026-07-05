@@ -1,0 +1,21 @@
+{{- if and .Values.metrics.serviceMonitor.enabled .Values.worker.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "maildesk.fullname" . }}-worker
+  labels:
+    {{- include "maildesk.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "maildesk.worker.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: management
+      path: /actuator/prometheus
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+{{- end }}

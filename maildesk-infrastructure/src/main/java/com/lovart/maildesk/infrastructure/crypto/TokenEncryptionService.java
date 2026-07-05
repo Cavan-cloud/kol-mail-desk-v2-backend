@@ -1,5 +1,6 @@
 package com.lovart.maildesk.infrastructure.crypto;
 
+import com.lovart.maildesk.domain.crypto.TokenEncryptionPort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -33,7 +34,7 @@ import java.util.Objects;
  * with a weak default.
  */
 @Component
-public class TokenEncryptionService {
+public class TokenEncryptionService implements TokenEncryptionPort {
 
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final int KEY_BYTES = 32;       // AES-256

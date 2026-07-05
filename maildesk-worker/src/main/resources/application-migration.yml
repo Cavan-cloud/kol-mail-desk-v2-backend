@@ -1,0 +1,19 @@
+# One-shot legacy Supabase → integration_credentials (P6-T10).
+# Requires TARGET datasource (spring.datasource.*) + maildesk.migration.source-jdbc-url.
+
+spring:
+  main:
+    web-application-type: none
+
+maildesk:
+  worker:
+    feishu-delta-sync:
+      enabled: false
+    gmail-incremental-sync:
+      enabled: false
+    scheduled-email-dispatch:
+      enabled: false
+  migration:
+    source-jdbc-url: ${MIGRATION_SOURCE_JDBC_URL:}
+    source-username: ${MIGRATION_SOURCE_USERNAME:postgres}
+    source-password: ${MIGRATION_SOURCE_PASSWORD:}

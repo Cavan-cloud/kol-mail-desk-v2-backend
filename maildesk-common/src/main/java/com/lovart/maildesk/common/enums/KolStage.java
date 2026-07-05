@@ -1,5 +1,10 @@
 package com.lovart.maildesk.common.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Locale;
+
 /**
  * KOL outreach / negotiation funnel stage.
  * <p>
@@ -17,5 +22,18 @@ public enum KolStage {
     PUBLISHED,
     PAYING,
     REINVEST,
-    DECLINED
+    DECLINED;
+
+    @JsonValue
+    public String apiValue() {
+        return name().toLowerCase(Locale.ROOT);
+    }
+
+    @JsonCreator
+    public static KolStage fromApiValue(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return valueOf(raw.trim().toUpperCase(Locale.ROOT));
+    }
 }

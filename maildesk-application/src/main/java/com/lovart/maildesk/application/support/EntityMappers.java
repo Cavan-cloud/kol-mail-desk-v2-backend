@@ -9,6 +9,8 @@ import com.lovart.maildesk.application.dto.TeamMemberDto;
 import com.lovart.maildesk.application.dto.WorkbenchKolDto;
 import com.lovart.maildesk.common.enums.EmailDirection;
 import com.lovart.maildesk.common.enums.KolStage;
+import com.lovart.maildesk.common.enums.KolStatus;
+import com.lovart.maildesk.common.enums.Platform;
 import com.lovart.maildesk.common.enums.UserRole;
 import com.lovart.maildesk.common.enums.UserStatus;
 import com.lovart.maildesk.domain.email.entity.EmailDO;
@@ -40,14 +42,14 @@ public final class EntityMappers {
                 kol.getEmail(),
                 kol.getName(),
                 kol.getHandle(),
-                kol.getPrimaryPlatform(),
+                enumToJson(kol.getPrimaryPlatform()),
                 kol.getType(),
                 kol.getExternalProfileUrl(),
                 kol.getSource(),
                 kol.getFeishuRecordId(),
                 localDateToOffsetDateTime(kol.getFeishuOutreachAt()),
                 enumToJson(kol.getStage()),
-                kol.getStatus(),
+                enumToJson(kol.getStatus()),
                 kol.getOwnerUserId(),
                 kol.getLastInboundAt(),
                 kol.getLastOutboundAt(),
@@ -55,6 +57,7 @@ public final class EntityMappers {
                 kol.getAgreedDeadline(),
                 kol.getNotes(),
                 Boolean.TRUE.equals(kol.getReplyResolved()),
+                Boolean.TRUE.equals(kol.getStageOverride()),
                 kol.getCreatedAt(),
                 kol.getUpdatedAt()
         );
@@ -107,7 +110,13 @@ public final class EntityMappers {
         );
     }
 
-    public static TeamMemberDto toTeamMemberDto(ProfileDO profile, boolean gmailAuthorized, int ownedKolCount) {
+    public static TeamMemberDto toTeamMemberDto(
+            ProfileDO profile,
+            boolean gmailAuthorized,
+            int ownedKolCount,
+            int activeKolCount,
+            int closedKolCount,
+            int stalledKolCount) {
         if (profile == null) {
             return null;
         }
@@ -122,7 +131,10 @@ public final class EntityMappers {
                 gmailAuthorized,
                 profile.getLastSyncedAt(),
                 profile.getCreatedAt(),
-                ownedKolCount
+                ownedKolCount,
+                activeKolCount,
+                closedKolCount,
+                stalledKolCount
         );
     }
 
@@ -198,6 +210,7 @@ public final class EntityMappers {
                 base.agreedDeadline(),
                 base.notes(),
                 base.replyResolved(),
+                base.stageOverride(),
                 base.createdAt(),
                 base.updatedAt(),
                 ownerName,
@@ -208,8 +221,16 @@ public final class EntityMappers {
         );
     }
 
+    private static String enumToJson(Platform platform) {
+        return platform == null ? null : platform.dbValue();
+    }
+
     private static String enumToJson(KolStage stage) {
         return stage == null ? null : stage.name().toLowerCase();
+    }
+
+    private static String enumToJson(KolStatus status) {
+        return status == null ? null : status.dbValue();
     }
 
     private static String enumToJson(EmailDirection direction) {

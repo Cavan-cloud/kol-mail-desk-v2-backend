@@ -7,9 +7,19 @@ import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerIntercep
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.lovart.maildesk.common.enums.ActionType;
+import com.lovart.maildesk.common.enums.EmailDirection;
+import com.lovart.maildesk.common.enums.KolStage;
+import com.lovart.maildesk.common.enums.KolStatus;
+import com.lovart.maildesk.common.enums.Platform;
+import com.lovart.maildesk.common.typehandler.ActionTypeTypeHandler;
 import com.lovart.maildesk.common.typehandler.EmailDirectionTypeHandler;
 import com.lovart.maildesk.common.typehandler.JsonbTypeHandler;
 import com.lovart.maildesk.common.typehandler.KolStageTypeHandler;
+import com.lovart.maildesk.common.typehandler.KolStatusTypeHandler;
+import com.lovart.maildesk.common.typehandler.PlatformTypeHandler;
+import com.lovart.maildesk.common.typehandler.UuidTypeHandler;
+import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -100,8 +110,25 @@ public class MyBatisPlusConfig {
         return configuration -> {
             TypeHandlerRegistry registry = configuration.getTypeHandlerRegistry();
             registry.register(new JsonbTypeHandler());
-            registry.register(new KolStageTypeHandler());
-            registry.register(new EmailDirectionTypeHandler());
+            // PgEnumTypeHandler subclasses extend BaseTypeHandler, not TypeReference,
+            // so the single-arg register(handler) overload cannot auto-detect the
+            // mapped Java type — it silently registers under a null type. That is
+            // enough for @TableField(typeHandler = ...)-annotated columns (SELECT /
+            // INSERT / UPDATE of the owning entity), but LambdaQueryWrapper
+            // conditions (.eq()/.in() built straight from the enum constant) look up
+            // a handler by the parameter's runtime Class and fall back to plain
+            // VARCHAR binding, which Postgres rejects for enum columns
+            // (e.g. "operator does not exist: kol_status = character varying").
+            // Registering the explicit (Class, TypeHandler) overload fixes both paths.
+            registry.register(KolStage.class, new KolStageTypeHandler());
+            registry.register(KolStatus.class, new KolStatusTypeHandler());
+            registry.register(Platform.class, new PlatformTypeHandler());
+            registry.register(EmailDirection.class, new EmailDirectionTypeHandler());
+            registry.register(ActionType.class, new ActionTypeTypeHandler());
+            UuidTypeHandler uuidTypeHandler = new UuidTypeHandler();
+            registry.register(uuidTypeHandler);
+            registry.register(UUID.class, uuidTypeHandler);
+            registry.register(UUID.class, JdbcType.OTHER, uuidTypeHandler);
             // StringArrayTypeHandler is intentionally NOT registered globally:
             // Java erases List<String> to raw List, which collides with MyBatis's
             // built-in collection mappers. Attach it per-field via

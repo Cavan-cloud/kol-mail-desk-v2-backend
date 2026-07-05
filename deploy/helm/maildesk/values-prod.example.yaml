@@ -1,0 +1,67 @@
+# Production overrides — no plaintext secrets in git (P6-T13)
+#
+# Usage:
+#   helm upgrade --install maildesk deploy/helm/maildesk \
+#     -f deploy/helm/maildesk/values-prod.example.yaml \
+#     --set database.host=postgres.example.svc \
+#     --set redis.host=redis.example.svc \
+#     --set config.corsAllowedOrigins=https://app.example.com \
+#     --set config.webRedirectUrl=https://app.example.com/ \
+#     --set ingress.enabled=true \
+#     --set ingress.hosts[0].host=api.example.com \
+#     --set global.imageRegistry=ghcr.io/your-org \
+#     --set api.image.tag=0.1.0 \
+#     --set worker.image.tag=0.1.0
+#
+# Prerequisites: External Secrets Operator + cloud secret populated (see deploy/secrets/README.md)
+
+secrets:
+  create: false
+  name: maildesk-secrets
+
+externalSecrets:
+  enabled: true
+  remoteRef:
+    secretName: maildesk/prod
+  secretStore:
+    provider: aws
+    aws:
+      region: ap-southeast-1
+
+serviceAccount:
+  create: true
+  annotations:
+    # EKS IRSA — role must allow secretsmanager:GetSecretValue on maildesk/prod
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/maildesk-external-secrets
+
+database:
+  host: postgres.example.svc
+  existingSecret: maildesk-secrets
+  passwordKey: db-password
+
+redis:
+  host: redis.example.svc
+  existingSecret: maildesk-secrets
+  passwordKey: redis-password
+
+config:
+  springProfilesActive: prod
+  corsAllowedOrigins: "https://app.example.com"
+  webRedirectUrl: "https://app.example.com/"
+  sessionCookieSecure: "true"
+
+alerts:
+  enabled: true
+
+metrics:
+  serviceMonitor:
+    enabled: true
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix

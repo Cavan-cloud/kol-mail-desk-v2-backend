@@ -69,3 +69,64 @@ jobs:
           name: failsafe-reports
           path: '**/target/failsafe-reports/**'
           retention-days: 7
+
+  docker-build:
+    name: docker-build
+    runs-on: ubuntu-latest
+    needs: ci
+    if: hashFiles('Dockerfile') != ''
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build --build-arg BUILD_MODULE=maildesk-api -t maildesk-api:ci .
+
+      - name: Build Worker image
+        run: docker build --build-arg BUILD_MODULE=maildesk-worker --build-arg HEALTH_CHECK_PORT=8081 -t maildesk-worker:ci .
+
+  helm-lint:
+    name: helm-lint
+    runs-on: ubuntu-latest
+    if: hashFiles('deploy/helm/maildesk/Chart.yaml') != ''
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: helm lint
+        run: |
+          helm lint deploy/helm/maildesk \
+            --set database.host=postgres.maildesk.svc \
+            --set redis.host=redis.maildesk.svc \
+            --set config.corsAllowedOrigins=https://app.example.com \
+            --set config.webRedirectUrl=https://app.example.com/
+
+      - name: helm template (dry render)
+        run: |
+          helm template maildesk deploy/helm/maildesk \
+            --namespace maildesk \
+            --set database.host=postgres.maildesk.svc \
+            --set redis.host=redis.maildesk.svc \
+            --set config.corsAllowedOrigins=https://app.example.com \
+            --set config.webRedirectUrl=https://app.example.com/ \
+            > /tmp/maildesk-rendered.yaml
+          test -s /tmp/maildesk-rendered.yaml
+          helm template maildesk deploy/helm/maildesk \
+            --namespace maildesk \
+            -f deploy/helm/maildesk/values-prod.example.yaml \
+            --set database.host=postgres.maildesk.svc \
+            --set redis.host=redis.maildesk.svc \
+            > /tmp/maildesk-prod-rendered.yaml
+          test -s /tmp/maildesk-prod-rendered.yaml
+          grep -q 'kind: ExternalSecret' /tmp/maildesk-prod-rendered.yaml
+          grep -q 'kind: SecretStore' /tmp/maildesk-prod-rendered.yaml
+
+      - name: guard no plaintext secrets in deploy/
+        run: chmod +x deploy/scripts/guard-no-plaintext-secrets.sh && deploy/scripts/guard-no-plaintext-secrets.sh

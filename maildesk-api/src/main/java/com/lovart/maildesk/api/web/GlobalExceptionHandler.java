@@ -2,6 +2,7 @@ package com.lovart.maildesk.api.web;
 
 import com.lovart.maildesk.api.security.ApiError;
 import com.lovart.maildesk.common.exception.BusinessException;
+import com.lovart.maildesk.common.exception.GmailIntegrationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -24,6 +25,12 @@ public class GlobalExceptionHandler {
             default -> HttpStatus.BAD_REQUEST;
         };
         return ResponseEntity.status(status).body(new ApiError(ex.errorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(GmailIntegrationException.class)
+    public ResponseEntity<ApiError> handleGmail(GmailIntegrationException ex) {
+        HttpStatus status = ex.credentialExpired() ? HttpStatus.UNAUTHORIZED : HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(new ApiError("GMAIL_ERROR", ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

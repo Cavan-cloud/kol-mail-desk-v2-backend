@@ -1,0 +1,47 @@
+# Local observability stack (Prometheus + Grafana + OTel Collector).
+#
+# Usage (with app stack running on the same compose network):
+#   docker compose -f docker-compose.dev.yml -f docker-compose.app.yml -f docker-compose.observability.yml up -d
+#
+# Grafana:    http://localhost:3001  (admin / admin)
+# Prometheus: http://localhost:9090
+
+name: maildesk-dev
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: maildesk-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus/alerts:/etc/prometheus/alerts:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: maildesk-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: maildesk-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./deploy/otel/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"

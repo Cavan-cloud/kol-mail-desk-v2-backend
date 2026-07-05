@@ -111,6 +111,64 @@ class FeishuKolUpsertServiceTest {
         assertThat(captor.getValue().getStage()).isNull();
     }
 
+    @Test
+    void updatePreservesManualNameWhenNameOverridden() {
+        FeishuKolDraft draft = new FeishuKolDraft(
+                "alice@example.com",
+                "Bob",
+                "Feishu Name",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                LocalDate.of(2026, 1, 1),
+                null);
+
+        KolDO existing = new KolDO();
+        existing.setId(UUID.randomUUID());
+        existing.setSource("feishu");
+        existing.setName("Manual Name");
+        existing.setNameOverridden(true);
+        when(kols.selectOne(any(LambdaQueryWrapper.class))).thenReturn(existing);
+
+        service.upsertChunk(List.of(draft), "sheet_token", Map.of(), now);
+
+        ArgumentCaptor<KolDO> captor = ArgumentCaptor.forClass(KolDO.class);
+        verify(kols).updateById(captor.capture());
+        assertThat(captor.getValue().getName()).isNull();
+    }
+
+    @Test
+    void updatePreservesManualStageWhenStageOverride() {
+        FeishuKolDraft draft = new FeishuKolDraft(
+                "alice@example.com",
+                "Bob",
+                "Feishu Name",
+                null,
+                null,
+                null,
+                null,
+                null,
+                KolStage.CONFIRMED,
+                LocalDate.of(2026, 1, 1),
+                null);
+
+        KolDO existing = new KolDO();
+        existing.setId(UUID.randomUUID());
+        existing.setSource("feishu");
+        existing.setStage(KolStage.NEGOTIATING);
+        existing.setStageOverride(true);
+        when(kols.selectOne(any(LambdaQueryWrapper.class))).thenReturn(existing);
+
+        service.upsertChunk(List.of(draft), "sheet_token", Map.of(), now);
+
+        ArgumentCaptor<KolDO> captor = ArgumentCaptor.forClass(KolDO.class);
+        verify(kols).updateById(captor.capture());
+        assertThat(captor.getValue().getStage()).isNull();
+    }
+
     private static FeishuKolDraft sampleDraft(KolStage stage) {
         return new FeishuKolDraft(
                 "alice@example.com",

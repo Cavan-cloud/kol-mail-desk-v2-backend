@@ -1,6 +1,21 @@
 spring:
   application:
     name: maildesk-api
+  config:
+    import: optional:classpath:application-observability.yml
+
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+  ai:
+    # ADR-007: multi-provider routing via maildesk.ai.* — disable single OpenAI auto-config.
+    openai:
+      api-key: disabled
+      chat:
+        enabled: false
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:maildesk}
@@ -98,3 +113,38 @@ maildesk:
     connect-timeout: 10s
     read-timeout: 30s
     max-retries: 3
+
+  gmail:
+    client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+    client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+    connect-timeout: 10s
+    read-timeout: 30s
+    max-retries: 3
+
+  ai:
+    enabled: true
+    default-provider: ${AI_DEFAULT_PROVIDER:moonshot}
+    providers:
+      moonshot:
+        base-url: ${MOONSHOT_BASE_URL:https://api.moonshot.cn}
+        api-key: ${MOONSHOT_API_KEY:}
+      deepseek:
+        base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+        api-key: ${DEEPSEEK_API_KEY:}
+    capabilities:
+      classify:
+        provider: moonshot
+        model: moonshot-v1-8k
+        fallback-provider: deepseek
+        fallback-model: deepseek-v4-flash
+      draft:
+        provider: moonshot
+        model: moonshot-v1-128k
+      check:
+        provider: moonshot
+        model: moonshot-v1-8k
+      translate:
+        provider: moonshot
+        model: moonshot-v1-8k
+        fallback-provider: deepseek
+        fallback-model: deepseek-v4-flash
