@@ -40,14 +40,18 @@ class FeishuSyncApplicationServiceTest {
     @BeforeEach
     void setUp() {
         auditLog = new AuditLogService(actions);
-        FeishuSyncService syncService =
-                new FeishuSyncService(feishuClient, profiles, new FeishuKolUpsertService(kols));
+        FeishuSyncService syncService = new FeishuSyncService(
+                feishuClient,
+                FeishuSyncTestSupport.recentMonthsProperties(),
+                profiles,
+                new FeishuKolUpsertService(kols));
         service = new FeishuSyncApplicationService(syncService, auditLog);
     }
 
     @Test
     void triggerSync_mapsUpsertCount() {
         when(feishuClient.isConfigured()).thenReturn(true);
+        when(feishuClient.isBitableSource()).thenReturn(false);
         when(feishuClient.configuredKolAppToken()).thenReturn("sheet_token");
         when(feishuClient.listSheets()).thenReturn(List.of(new FeishuSheetMeta("sh1", "欧美", 5, 10)));
         when(feishuClient.readSheetValues(any(FeishuSheetMeta.class))).thenReturn(List.of(

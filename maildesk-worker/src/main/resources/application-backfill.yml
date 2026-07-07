@@ -1,6 +1,7 @@
 # Activated by `spring.profiles.active=backfill`. Runs FeishuBackfillRunner once and exits.
 #
-# Full import (every sheet tab, no row cap):
+# Full import (roster tabs: all month sheets + 欧美/拉美/韩国, see FEISHU_TAB_FILTER):
+#   mvn -B -pl maildesk-worker -am install -DskipTests
 #   mvn -B -pl maildesk-worker spring-boot:run -Dspring-boot.run.profiles=backfill
 #
 # Dry-run (parse + merge only, no DB writes):

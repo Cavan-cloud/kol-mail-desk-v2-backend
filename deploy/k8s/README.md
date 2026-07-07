@@ -38,6 +38,8 @@ helm upgrade --install maildesk deploy/helm/maildesk \
   --set redis.host=redis.example.svc \
   --set config.corsAllowedOrigins=https://app.example.com \
   --set config.webRedirectUrl=https://app.example.com/ \
+  --set webIngress.enabled=true \
+  --set webIngress.hosts[0].host=app.example.com \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host=api.example.com
 ```
@@ -48,8 +50,9 @@ helm upgrade --install maildesk deploy/helm/maildesk \
 |------|------|
 | `Deployment/maildesk-api` | REST + OAuth2，默认 2 副本，可选 HPA |
 | `Deployment/maildesk-worker` | 定时同步 / 定时发信，**默认 1 副本**（见 R7） |
-| `Service` | API `:8080`，Worker management `:8081` |
-| `Ingress` | 可选，仅暴露 API |
+| `Deployment/maildesk-web` | Next.js 前端，默认 2 副本 |
+| `Service` | API `:8080`，Worker management `:8081`，Web `:3000` |
+| `Ingress` | API Ingress（`api.*`）+ Web Ingress（`app.*`） |
 | `Secret` | 默认不创建；`externalSecrets.enabled=true` 经 ESO 从云 SM 同步；`secrets.create=true` 仅供本地 smoke |
 
 ## 生产密钥（P6-T13）

@@ -27,9 +27,9 @@ public record FeishuFieldHeaders(
         return new FeishuFieldHeaders(
                 List.of("KOL联系方式", "联系方式", "邮箱", "Email"),
                 List.of("运营", "负责人"),
-                List.of("KOL用户名", "达人名", "名称"),
+                List.of("KOL用户名", "KOL账户名", "达人名", "名称"),
                 List.of("主页链接", "主页链接合集", "账号（主页链接）"),
-                List.of("平台（只填主渠道）", "主平台", "平台"),
+                List.of("平台（只填主渠道）", "平台/召唤工具", "主平台", "平台"),
                 List.of("国家", "注册国家"),
                 List.of("语言"),
                 List.of("频道类型", "类型"),
@@ -41,6 +41,7 @@ public record FeishuFieldHeaders(
                 List.of(
                         "建联时间",
                         "建联日期",
+                        "进款日期",
                         "KOL建联时间",
                         "KOL建联日期",
                         "首次建联时间",

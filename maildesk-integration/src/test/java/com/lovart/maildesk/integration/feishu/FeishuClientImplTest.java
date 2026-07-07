@@ -34,6 +34,7 @@ class FeishuClientImplTest {
         properties.setAppSecret("secret_test");
         properties.setKolAppToken("sheet_token_abc");
         properties.setKolTableId("tbl_test");
+        properties.setSyncSource("sheet");
         properties.setApiBase(API_BASE);
 
         RestTemplate restTemplate = new RestTemplate();
@@ -142,6 +143,46 @@ class FeishuClientImplTest {
         assertThat(result.status()).isEqualTo("checked");
         assertThat(result.sheetCount()).isEqualTo(1);
         assertThat(result.sheetTitles()).containsExactly("3月");
+        server.verify();
+    }
+
+    @Test
+    void listBitableTables_paginatesUntilHasMoreFalse() {
+        properties.setSyncSource("bitable");
+        properties.setKolAppToken("appTok");
+        expectToken();
+        server.expect(requestTo(API_BASE + "/bitable/v1/apps/appTok/tables?page_size=100"))
+                .andRespond(withSuccess("""
+                        {"code":0,"data":{"has_more":false,"items":[
+                          {"table_id":"tbl7","name":"7月"},
+                          {"table_id":"tblEu","name":"欧美"}
+                        ]}}
+                        """, MediaType.APPLICATION_JSON));
+
+        List<com.lovart.maildesk.domain.feishu.FeishuBitableTableMeta> tables =
+                client.listBitableTables("appTok");
+
+        assertThat(tables).hasSize(2);
+        assertThat(tables.get(0).name()).isEqualTo("7月");
+        server.verify();
+    }
+
+    @Test
+    void verifyConfiguration_listsBitableTablesWhenBitableSource() {
+        properties.setSyncSource("bitable");
+        properties.setKolAppToken("app_token_xyz");
+        expectToken();
+        server.expect(requestTo(API_BASE + "/bitable/v1/apps/app_token_xyz/tables?page_size=100"))
+                .andRespond(withSuccess("""
+                        {"code":0,"data":{"has_more":false,"items":[
+                          {"table_id":"tbl7","name":"7月"}
+                        ]}}
+                        """, MediaType.APPLICATION_JSON));
+
+        FeishuConfigCheckResult result = client.verifyConfiguration();
+
+        assertThat(result.ok()).isTrue();
+        assertThat(result.sheetTitles()).containsExactly("7月");
         server.verify();
     }
 

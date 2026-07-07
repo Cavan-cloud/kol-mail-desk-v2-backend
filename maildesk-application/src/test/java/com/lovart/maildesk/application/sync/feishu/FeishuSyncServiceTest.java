@@ -37,7 +37,11 @@ class FeishuSyncServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new FeishuSyncService(feishuClient, profiles, new FeishuKolUpsertService(kols));
+        service = new FeishuSyncService(
+                feishuClient,
+                FeishuSyncTestSupport.recentMonthsProperties(),
+                profiles,
+                new FeishuKolUpsertService(kols));
     }
 
     @Test
@@ -52,6 +56,7 @@ class FeishuSyncServiceTest {
     @Test
     void parsesSheetRowsAndUpsertsMergedPairs() {
         when(feishuClient.isConfigured()).thenReturn(true);
+        when(feishuClient.isBitableSource()).thenReturn(false);
         when(feishuClient.configuredKolAppToken()).thenReturn("sheet_token");
         when(feishuClient.listSheets()).thenReturn(List.of(new FeishuSheetMeta("sh1", "欧美", 5, 10)));
         when(feishuClient.readSheetValues(any(FeishuSheetMeta.class))).thenReturn(List.of(
@@ -73,6 +78,7 @@ class FeishuSyncServiceTest {
     @Test
     void dryRunDoesNotPersist() {
         when(feishuClient.isConfigured()).thenReturn(true);
+        when(feishuClient.isBitableSource()).thenReturn(false);
         when(feishuClient.configuredKolAppToken()).thenReturn("sheet_token");
         when(feishuClient.listSheets()).thenReturn(List.of(new FeishuSheetMeta("sh1", "欧美", 5, 10)));
         when(feishuClient.readSheetValues(any(FeishuSheetMeta.class))).thenReturn(List.of(
@@ -80,7 +86,7 @@ class FeishuSyncServiceTest {
                 List.of("Alice", "alice@example.com", "", "", "", "", "已询价", "")));
         when(profiles.selectList(any())).thenReturn(List.of());
 
-        FeishuSyncResult result = service.sync(new FeishuSyncOptions(null, true, null, 2, List.of("欧美")));
+        FeishuSyncResult result = service.sync(new FeishuSyncOptions(null, null, true, null, 2, List.of("欧美")));
 
         assertThat(result.dryRun()).isTrue();
         assertThat(result.upserted()).isEqualTo(1);

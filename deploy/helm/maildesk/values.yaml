@@ -184,12 +184,60 @@ worker:
       timeoutSeconds: 5
       failureThreshold: 3
 
+web:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: maildesk-web
+    tag: "" # defaults to Chart.appVersion; build with NEXT_PUBLIC_API_BASE_URL per env
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+    annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  probes:
+    liveness:
+      path: /login
+      initialDelaySeconds: 15
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /login
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
 ingress:
   enabled: false
   className: ""
   annotations: {}
   hosts:
     - host: api.maildesk.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+webIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: app.maildesk.example.com
       paths:
         - path: /
           pathType: Prefix

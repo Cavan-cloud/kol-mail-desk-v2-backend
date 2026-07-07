@@ -1,5 +1,6 @@
 package com.lovart.maildesk.application.sync.feishu;
 
+import com.lovart.maildesk.common.feishu.FeishuTabFilterMode;
 import com.lovart.maildesk.domain.feishu.FeishuSheetMeta;
 
 import java.time.LocalDate;
@@ -31,6 +32,38 @@ public final class FeishuSheetFilter {
                     return month == null || allowed.contains(month);
                 })
                 .toList();
+    }
+
+    public static List<FeishuSheetMeta> filterSheets(
+            List<FeishuSheetMeta> sheets,
+            FeishuTabFilterMode mode,
+            int recentMonths,
+            Set<String> regionalTabNames) {
+        if (sheets == null || sheets.isEmpty()) {
+            return List.of();
+        }
+        return switch (mode) {
+            case ALL -> sheets;
+            case RECENT_MONTHS -> filterRecentMonthSheets(sheets, recentMonths);
+            case ROSTER -> filterRosterSheets(sheets, regionalTabNames);
+        };
+    }
+
+    public static List<FeishuSheetMeta> filterRosterSheets(List<FeishuSheetMeta> sheets, Set<String> regionalTabNames) {
+        if (sheets == null || sheets.isEmpty()) {
+            return List.of();
+        }
+        Set<String> regional = regionalTabNames == null ? Set.of() : regionalTabNames;
+        return sheets.stream()
+                .filter(sheet -> isRosterTab(sheet.title(), regional))
+                .toList();
+    }
+
+    public static boolean isRosterTab(String title, Set<String> regionalTabNames) {
+        if (parseMonthFromTitle(title) != null) {
+            return true;
+        }
+        return regionalTabNames != null && regionalTabNames.contains(title);
     }
 
     static Set<Integer> allowedMonths(int monthsWindow, LocalDate today) {

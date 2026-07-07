@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lovart.maildesk.common.exception.FeishuIntegrationException;
 import com.lovart.maildesk.domain.feishu.FeishuBitableRecord;
+import com.lovart.maildesk.domain.feishu.FeishuBitableTableMeta;
 import com.lovart.maildesk.domain.feishu.FeishuClient;
 import com.lovart.maildesk.domain.feishu.FeishuConfigCheckResult;
 import com.lovart.maildesk.domain.feishu.FeishuSheetMeta;
@@ -66,14 +67,24 @@ public class FeishuClientImpl implements FeishuClient {
     }
 
     @Override
+    public boolean isBitableSource() {
+        return properties.isBitableSource();
+    }
+
+    @Override
     public FeishuConfigCheckResult verifyConfiguration() {
         List<String> missing = missingConfigKeys();
         if (!missing.isEmpty()) {
             return FeishuConfigCheckResult.notConfigured(missing);
         }
         String token = properties.getKolAppToken();
-        List<FeishuSheetMeta> sheets = listSheets(token);
         String prefix = token.length() <= 8 ? token + "..." : token.substring(0, 8) + "...";
+        if (isBitableSource()) {
+            List<FeishuBitableTableMeta> tables = listBitableTables(token);
+            List<String> titles = tables.stream().map(FeishuBitableTableMeta::name).limit(20).toList();
+            return FeishuConfigCheckResult.checked(!tables.isEmpty(), prefix, tables.size(), titles);
+        }
+        List<FeishuSheetMeta> sheets = listSheets(token);
         List<String> titles = sheets.stream().map(FeishuSheetMeta::title).limit(20).toList();
         return FeishuConfigCheckResult.checked(!sheets.isEmpty(), prefix, sheets.size(), titles);
     }
@@ -143,6 +154,41 @@ public class FeishuClientImpl implements FeishuClient {
             }
         }
         return rows;
+    }
+
+    @Override
+    public List<FeishuBitableTableMeta> listBitableTables() {
+        requireKolAppToken();
+        return listBitableTables(properties.getKolAppToken());
+    }
+
+    @Override
+    public List<FeishuBitableTableMeta> listBitableTables(String appToken) {
+        String accessToken = tenantAccessToken();
+        List<FeishuBitableTableMeta> tables = new ArrayList<>();
+        String pageToken = "";
+        do {
+            final String nextPage = pageToken;
+            JsonNode root = executeWithRetry(() -> {
+                String path = "/bitable/v1/apps/{app}/tables?page_size=100";
+                if (!nextPage.isBlank()) {
+                    path += "&page_token=" + nextPage;
+                }
+                return getForJson(path, accessToken, appToken);
+            });
+            assertFeishuOk(root, "读取飞书多维表格列表失败");
+            JsonNode items = root.path("data").path("items");
+            if (items.isArray()) {
+                for (JsonNode item : items) {
+                    tables.add(new FeishuBitableTableMeta(
+                            item.path("table_id").asText(),
+                            item.path("name").asText()));
+                }
+            }
+            boolean hasMore = root.path("data").path("has_more").asBoolean(false);
+            pageToken = hasMore ? root.path("data").path("page_token").asText("") : "";
+        } while (!pageToken.isBlank());
+        return tables;
     }
 
     @Override

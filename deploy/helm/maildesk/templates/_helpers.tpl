@@ -49,6 +49,11 @@ app.kubernetes.io/component: api
 app.kubernetes.io/component: worker
 {{- end }}
 
+{{- define "maildesk.web.selectorLabels" -}}
+{{ include "maildesk.selectorLabels" . }}
+app.kubernetes.io/component: web
+{{- end }}
+
 {{- define "maildesk.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
 {{- default (include "maildesk.fullname" .) .Values.serviceAccount.name }}

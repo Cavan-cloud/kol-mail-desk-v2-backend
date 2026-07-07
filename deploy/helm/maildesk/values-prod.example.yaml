@@ -11,7 +11,8 @@
 #     --set ingress.hosts[0].host=api.example.com \
 #     --set global.imageRegistry=ghcr.io/your-org \
 #     --set api.image.tag=0.1.0 \
-#     --set worker.image.tag=0.1.0
+#     --set worker.image.tag=0.1.0 \
+#     --set web.image.tag=0.1.0
 #
 # Prerequisites: External Secrets Operator + cloud secret populated (see deploy/secrets/README.md)
 
@@ -62,6 +63,19 @@ ingress:
   className: nginx
   hosts:
     - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+web:
+  enabled: true
+  replicaCount: 2
+
+webIngress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: app.example.com
       paths:
         - path: /
           pathType: Prefix

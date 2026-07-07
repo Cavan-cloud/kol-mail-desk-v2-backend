@@ -14,10 +14,13 @@ public interface FeishuClient {
     boolean isConfigured();
 
     /**
-     * Lightweight connectivity check: obtains a tenant token and lists spreadsheet tabs.
+     * Lightweight connectivity check: obtains a tenant token and lists data sources.
      * Does not mutate Feishu data.
      */
     FeishuConfigCheckResult verifyConfiguration();
+
+    /** Whether sync reads from Bitable tables ({@code true}) or spreadsheet tabs ({@code false}). */
+    boolean isBitableSource();
 
     /** Lists tabs in the configured KOL spreadsheet ({@code FEISHU_KOL_APP_TOKEN}). */
     List<FeishuSheetMeta> listSheets();
@@ -34,10 +37,13 @@ public interface FeishuClient {
      */
     List<List<Object>> readSheetValues(String spreadsheetToken, FeishuSheetMeta sheet, Integer maxRows);
 
-    /**
-     * Lists records from a Bitable table (paginated). Used for legacy 达人库 backfill
-     * and diagnostics; primary sync path is spreadsheet-based.
-     */
+    /** Lists data tables inside a Bitable app. */
+    List<FeishuBitableTableMeta> listBitableTables(String appToken);
+
+    /** Lists data tables in the configured Bitable app ({@code FEISHU_KOL_APP_TOKEN}). */
+    List<FeishuBitableTableMeta> listBitableTables();
+
+    /** Lists records from a Bitable table (paginated). */
     List<FeishuBitableRecord> listBitableRecords(String appToken, String tableId, Integer maxRecords);
 
     /** Lists records from the configured app token + table id. */

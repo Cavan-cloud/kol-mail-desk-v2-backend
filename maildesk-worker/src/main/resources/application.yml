@@ -81,6 +81,11 @@ maildesk:
     app-secret: ${FEISHU_APP_SECRET:}
     kol-app-token: ${FEISHU_KOL_APP_TOKEN:}
     kol-table-id: ${FEISHU_KOL_TABLE_ID:}
+    sync-source: ${FEISHU_SYNC_SOURCE:bitable}
+    tab-filter: ${FEISHU_TAB_FILTER:roster}
+    regional-tab-names: ${FEISHU_REGIONAL_TAB_NAMES:欧美,拉美,韩国}
+    sheet-recent-months: ${FEISHU_SHEET_RECENT_MONTHS:2}
+    full-sync: ${FEISHU_FULL_SYNC:true}
     connect-timeout: 10s
     read-timeout: 30s
     max-retries: 3

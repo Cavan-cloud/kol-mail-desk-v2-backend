@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-#
 # Multi-stage build for maildesk-api or maildesk-worker.
 #
 #   docker build --build-arg BUILD_MODULE=maildesk-api -t maildesk-api:local .
@@ -25,9 +23,8 @@ COPY maildesk-application/pom.xml maildesk-application/pom.xml
 COPY maildesk-api/pom.xml maildesk-api/pom.xml
 COPY maildesk-worker/pom.xml maildesk-worker/pom.xml
 
-ARG BUILD_MODULE
-RUN mvn -B -ntp dependency:go-offline -pl "${BUILD_MODULE}" -am \
-    || mvn -B -ntp dependency:resolve -pl "${BUILD_MODULE}" -am
+# 不在此阶段 go-offline：多模块 SNAPSHOT + 部分传递依赖会导致 Docker 内解析失败。
+# 依赖在 builder 阶段 package 时一次性下载。
 
 # ---- Compile + repackage ----
 FROM deps AS builder

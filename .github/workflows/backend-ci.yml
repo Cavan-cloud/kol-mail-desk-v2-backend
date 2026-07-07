@@ -106,7 +106,9 @@ jobs:
             --set database.host=postgres.maildesk.svc \
             --set redis.host=redis.maildesk.svc \
             --set config.corsAllowedOrigins=https://app.example.com \
-            --set config.webRedirectUrl=https://app.example.com/
+            --set config.webRedirectUrl=https://app.example.com/ \
+            --set webIngress.enabled=true \
+            --set webIngress.hosts[0].host=app.example.com
 
       - name: helm template (dry render)
         run: |
@@ -116,8 +118,12 @@ jobs:
             --set redis.host=redis.maildesk.svc \
             --set config.corsAllowedOrigins=https://app.example.com \
             --set config.webRedirectUrl=https://app.example.com/ \
+            --set webIngress.enabled=true \
+            --set webIngress.hosts[0].host=app.example.com \
             > /tmp/maildesk-rendered.yaml
           test -s /tmp/maildesk-rendered.yaml
+          grep -q 'kind: Deployment' /tmp/maildesk-rendered.yaml
+          grep -q 'maildesk-web' /tmp/maildesk-rendered.yaml
           helm template maildesk deploy/helm/maildesk \
             --namespace maildesk \
             -f deploy/helm/maildesk/values-prod.example.yaml \
