@@ -1,0 +1,26 @@
+apiVersion: alibabacloud.com/v1
+kind: AlbConfig
+metadata:
+  name: alb
+spec:
+  config:
+    name: kolmail-alb
+    addressType: Internet
+    zoneMappings:
+      - vSwitchId: vsw-j6cf18c5xkut66th5grbv
+      - vSwitchId: vsw-j6coer6g43db5m0ykcvrt
+  listeners:
+    - port: 80
+      protocol: HTTP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: alb
+spec:
+  controller: ingress.k8s.alibabacloud/alb
+  parameters:
+    apiGroup: alibabacloud.com
+    kind: AlbConfig
+    name: alb

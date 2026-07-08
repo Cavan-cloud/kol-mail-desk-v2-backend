@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/board")
 public class BoardController {
@@ -20,8 +22,14 @@ public class BoardController {
 
     @GetMapping
     public ResponseEntity<BoardSummaryDto> getBoard(
-            @RequestParam(required = false, defaultValue = "all") String window
+            @RequestParam(required = false, defaultValue = "all") String window,
+            @RequestParam(required = false) UUID owner,
+            @RequestParam(required = false, defaultValue = "true") boolean includeInterns,
+            @RequestParam(required = false) String detail,
+            @RequestParam(required = false) String stage,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size
     ) {
-        return ResponseEntity.ok(board.getBoard(window));
+        return ResponseEntity.ok(board.getBoard(window, owner, includeInterns, detail, stage, page, size));
     }
 }

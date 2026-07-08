@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -92,7 +93,7 @@ public class WorkbenchApplicationService {
                 ? List.of()
                 : filtered.subList(from, to);
 
-        WorkbenchSidebarStatsDto sidebar = buildSidebar(base, scopedTotal);
+        WorkbenchSidebarStatsDto sidebar = buildSidebar(base, scopedTotal, countTeamPoolKols());
         PageMetaDto pageMeta = new PageMetaDto(pageNum, pageSize, filtered.size());
         return new WorkbenchResponseDto(pageData, sidebar, pageMeta);
     }
@@ -184,12 +185,20 @@ public class WorkbenchApplicationService {
         return profile == null ? "未知成员" : profile.getDisplayName();
     }
 
-    private WorkbenchSidebarStatsDto buildSidebar(List<WorkbenchKolDto> base, long scopedTotal) {
+    private long countTeamPoolKols() {
+        LambdaQueryWrapper<KolDO> wrapper = new LambdaQueryWrapper<KolDO>()
+                .in(KolDO::getStatus, KolStatus.UNASSIGNED, KolStatus.ORPHANED);
+        Long count = kols.selectCount(wrapper);
+        return count == null ? 0 : count;
+    }
+
+    private WorkbenchSidebarStatsDto buildSidebar(List<WorkbenchKolDto> base, long scopedTotal, long teamPool) {
         Map<KolStage, Integer> stageCounts = new EnumMap<>(KolStage.class);
         for (KolStage stage : StageCatalog.ALL_STAGES) {
             stageCounts.put(stage, 0);
         }
-        int unread = 0;
+        int unreadEmails = 0;
+        int unreadKols = 0;
         int unreplied = 0;
         for (WorkbenchKolDto kol : base) {
             if (kol.stage() != null) {
@@ -200,16 +209,23 @@ public class WorkbenchApplicationService {
                     // skip unknown stage strings
                 }
             }
-            unread += kol.unreadCount();
+            if (kol.unreadCount() > 0) {
+                unreadKols++;
+            }
+            unreadEmails += kol.unreadCount();
             if (kol.unreplied()) {
                 unreplied++;
             }
         }
+        Map<String, Integer> stageCountsJson = new LinkedHashMap<>(StageCatalog.stageCountsJson(stageCounts));
+        stageCountsJson.put("unread", unreadKols);
+        stageCountsJson.put("unreplied", unreplied);
         return new WorkbenchSidebarStatsDto(
                 (int) scopedTotal,
-                unread,
+                unreadEmails,
                 unreplied,
-                StageCatalog.stageCountsJson(stageCounts)
+                (int) teamPool,
+                stageCountsJson
         );
     }
 
