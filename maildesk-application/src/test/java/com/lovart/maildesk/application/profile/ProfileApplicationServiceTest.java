@@ -10,6 +10,7 @@ import com.lovart.maildesk.common.exception.BusinessException;
 import com.lovart.maildesk.domain.audit.entity.ActionDO;
 import com.lovart.maildesk.domain.audit.mapper.ActionMapper;
 import com.lovart.maildesk.domain.credential.mapper.IntegrationCredentialMapper;
+import com.lovart.maildesk.domain.email.mapper.EmailMapper;
 import com.lovart.maildesk.domain.kol.mapper.KolMapper;
 import com.lovart.maildesk.domain.profile.entity.ProfileDO;
 import com.lovart.maildesk.domain.profile.mapper.ProfileMapper;
@@ -40,6 +41,9 @@ class ProfileApplicationServiceTest {
     private KolMapper kols;
 
     @Mock
+    private EmailMapper emails;
+
+    @Mock
     private ActionMapper actions;
 
     private ProfileApplicationService service;
@@ -48,7 +52,7 @@ class ProfileApplicationServiceTest {
     @BeforeEach
     void setUp() {
         TeamApplicationService teamService =
-                new TeamApplicationService(profiles, kols, credentials, new AuditLogService(actions));
+                new TeamApplicationService(profiles, kols, emails, credentials, new AuditLogService(actions));
         service = new ProfileApplicationService(
                 profiles, credentials, teamService, new AuditLogService(actions));
         userId = UUID.randomUUID();

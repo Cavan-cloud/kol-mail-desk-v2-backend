@@ -217,6 +217,57 @@ class GmailPersistServiceTest {
         return kol;
     }
 
+    @Test
+    void doesNotCreateGmailDuplicateWhenOperatorUnset() {
+        KolDO feishuKol = feishuKol("creator@example.com");
+        feishuKol.setFeishuOperatorName("潘慧妍");
+        feishuKol.setOwnerUserId(null);
+        when(kols.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(feishuKol));
+        when(emails.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of());
+
+        GmailSyncMessageDraft draft = inboundDraft("creator@example.com", "msg-unset-op");
+        service.persist(userId, null, List.of(draft));
+
+        verify(kols, never()).insert(any(KolDO.class));
+        ArgumentCaptor<EmailDO> emailCaptor = ArgumentCaptor.forClass(EmailDO.class);
+        verify(emails).insert(emailCaptor.capture());
+        assertThat(emailCaptor.getValue().getKolId()).isEqualTo(feishuKol.getId());
+        verify(kols).update(isNull(), any(UpdateWrapper.class));
+    }
+
+    @Test
+    void autoClaimsFeishuRowWhenOperatorMatches() {
+        KolDO feishuKol = feishuKol("creator@example.com");
+        feishuKol.setFeishuOperatorName("潘慧妍");
+        feishuKol.setOwnerUserId(null);
+        when(kols.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(feishuKol));
+        when(emails.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of());
+
+        service.persist(userId, "潘慧妍", List.of(inboundDraft("creator@example.com", "msg-claim")));
+
+        verify(kols, never()).insert(any(KolDO.class));
+        ArgumentCaptor<UpdateWrapper<KolDO>> kolUpdate = ArgumentCaptor.forClass(UpdateWrapper.class);
+        verify(kols).update(isNull(), kolUpdate.capture());
+        assertThat(kolUpdate.getValue().getSqlSet()).contains("owner_user_id");
+    }
+
+    @Test
+    void attachesToFeishuRowWithoutClaimWhenOperatorMismatches() {
+        KolDO feishuKol = feishuKol("creator@example.com");
+        feishuKol.setFeishuOperatorName("其他人");
+        feishuKol.setOwnerUserId(null);
+        when(kols.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(feishuKol));
+        when(emails.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of());
+
+        service.persist(userId, "潘慧妍", List.of(inboundDraft("creator@example.com", "msg-mismatch")));
+
+        verify(kols, never()).insert(any(KolDO.class));
+        ArgumentCaptor<UpdateWrapper<KolDO>> kolUpdate = ArgumentCaptor.forClass(UpdateWrapper.class);
+        verify(kols).update(isNull(), kolUpdate.capture());
+        String sqlSet = kolUpdate.getValue().getSqlSet();
+        assertThat(sqlSet == null || !sqlSet.contains("owner_user_id")).isTrue();
+    }
+
     private static GmailSyncMessageDraft inboundDraft(String counterparty, String messageId) {
         OffsetDateTime sentAt = OffsetDateTime.now(ZoneOffset.UTC);
         GmailFullMessage parsed = new GmailFullMessage(

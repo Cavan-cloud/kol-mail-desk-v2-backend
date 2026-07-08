@@ -50,6 +50,12 @@ config:
   corsAllowedOrigins: "https://app.example.com"
   webRedirectUrl: "https://app.example.com/"
   sessionCookieSecure: "true"
+  # Sheet mode (leave feishuKolTableId empty in Secret); use bitable + table id for Bitable mode
+  feishuSyncSource: sheet
+  feishuTabFilter: roster
+  feishuRegionalTabNames: "欧美,拉美,韩国"
+  feishuSheetRecentMonths: "2"
+  feishuFullSync: "true"
 
 alerts:
   enabled: true

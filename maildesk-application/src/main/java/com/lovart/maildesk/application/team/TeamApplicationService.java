@@ -19,6 +19,8 @@ import com.lovart.maildesk.common.exception.BusinessException;
 import com.lovart.maildesk.common.feishu.FeishuCellExtractor;
 import com.lovart.maildesk.domain.credential.entity.IntegrationCredentialDO;
 import com.lovart.maildesk.domain.credential.mapper.IntegrationCredentialMapper;
+import com.lovart.maildesk.domain.email.entity.EmailDO;
+import com.lovart.maildesk.domain.email.mapper.EmailMapper;
 import com.lovart.maildesk.domain.kol.entity.KolDO;
 import com.lovart.maildesk.domain.kol.mapper.KolMapper;
 import com.lovart.maildesk.domain.profile.entity.ProfileDO;
@@ -26,7 +28,6 @@ import com.lovart.maildesk.domain.profile.mapper.ProfileMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -42,22 +43,30 @@ import java.util.UUID;
 public class TeamApplicationService {
 
     private static final String GOOGLE_CREDENTIAL_TYPE = "google";
+    private static final String SOURCE_GMAIL = "gmail";
+    private static final String SOURCE_FEISHU = "feishu";
 
     private final ProfileMapper profiles;
     private final KolMapper kols;
+    private final EmailMapper emails;
     private final IntegrationCredentialMapper credentials;
     private final AuditLogService auditLog;
 
     public TeamApplicationService(
             ProfileMapper profiles,
             KolMapper kols,
+            EmailMapper emails,
             IntegrationCredentialMapper credentials,
             AuditLogService auditLog
     ) {
         this.profiles = profiles;
         this.kols = kols;
+        this.emails = emails;
         this.credentials = credentials;
         this.auditLog = auditLog;
+    }
+
+    public record OperatorClaimResult(int released, int assigned) {
     }
 
     @Transactional(readOnly = true)
@@ -149,6 +158,23 @@ public class TeamApplicationService {
     }
 
     /**
+     * Releases premature gmail duplicate / empty-operator claims, then claims rows matching the profile.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public OperatorClaimResult reconcileAndAssignKolsByOperatorName(UUID userId, String feishuOperatorName) {
+        if (userId == null || feishuOperatorName == null || feishuOperatorName.isBlank()) {
+            return new OperatorClaimResult(0, 0);
+        }
+        String normalized = FeishuCellExtractor.normalizeOperatorName(feishuOperatorName);
+        if (normalized.isEmpty()) {
+            return new OperatorClaimResult(0, 0);
+        }
+        int released = releasePrematureOwnedKols(userId, normalized);
+        int assigned = assignKolsByOperatorName(userId, feishuOperatorName);
+        return new OperatorClaimResult(released, assigned);
+    }
+
+    /**
      * Claims unowned KOL rows whose {@code feishu_operator_name} matches the saved profile value.
      * Ported from legacy {@code app/api/team/profile/route.ts}.
      */
@@ -166,7 +192,60 @@ public class TeamApplicationService {
                 new UpdateWrapper<KolDO>()
                         .set("owner_user_id", userId)
                         .isNull("owner_user_id")
-                        .apply("lower(replace(trim(feishu_operator_name), '@', '')) = {0}", normalized));
+                        .apply(
+                                "regexp_replace(lower(replace(trim(feishu_operator_name), '@', '')), '\\s', '', 'g') = {0}",
+                                normalized));
+    }
+
+    private int releasePrematureOwnedKols(UUID userId, String normalizedOperator) {
+        List<KolDO> owned = kols.selectList(
+                new LambdaQueryWrapper<KolDO>().eq(KolDO::getOwnerUserId, userId));
+        int released = 0;
+        for (KolDO kol : owned) {
+            if (matchesOperatorName(kol.getFeishuOperatorName(), normalizedOperator)) {
+                continue;
+            }
+            boolean gmailDuplicate = SOURCE_GMAIL.equals(kol.getSource());
+            boolean emptyOperator = FeishuCellExtractor.normalizeOperatorName(kol.getFeishuOperatorName()).isEmpty();
+            if (!gmailDuplicate && !emptyOperator) {
+                continue;
+            }
+            migrateEmailsToMatchingFeishuRow(userId, kol, normalizedOperator);
+            KolDO patch = new KolDO();
+            patch.setId(kol.getId());
+            patch.setOwnerUserId(null);
+            kols.updateById(patch);
+            released++;
+        }
+        return released;
+    }
+
+    private void migrateEmailsToMatchingFeishuRow(UUID userId, KolDO fromKol, String normalizedOperator) {
+        if (fromKol.getEmail() == null || fromKol.getEmail().isBlank()) {
+            return;
+        }
+        String normalizedEmail = fromKol.getEmail().trim().toLowerCase();
+        List<KolDO> siblings = kols.selectList(new LambdaQueryWrapper<KolDO>()
+                .apply("normalized_email = {0}", normalizedEmail)
+                .ne(KolDO::getId, fromKol.getId()));
+        KolDO target = siblings.stream()
+                .filter(k -> SOURCE_FEISHU.equals(k.getSource()) || k.getFeishuRecordId() != null)
+                .filter(k -> matchesOperatorName(k.getFeishuOperatorName(), normalizedOperator))
+                .findFirst()
+                .orElse(null);
+        if (target == null) {
+            return;
+        }
+        emails.update(
+                null,
+                new UpdateWrapper<EmailDO>()
+                        .set("kol_id", target.getId())
+                        .eq("kol_id", fromKol.getId())
+                        .eq("user_id", userId));
+    }
+
+    private static boolean matchesOperatorName(String stored, String normalizedOperator) {
+        return FeishuCellExtractor.normalizeOperatorName(stored).equals(normalizedOperator);
     }
 
     /**

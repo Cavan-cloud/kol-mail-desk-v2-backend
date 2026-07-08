@@ -74,6 +74,7 @@ spec:
               value: {{ .Values.config.sessionCookieSecure | quote }}
             - name: SESSION_COOKIE_SAME_SITE
               value: {{ .Values.config.sessionCookieSameSite | quote }}
+            {{- include "maildesk.feishuEnv" . | nindent 12 }}
             {{- include "maildesk.secretEnv" . | nindent 12 }}
           livenessProbe:
             httpGet:

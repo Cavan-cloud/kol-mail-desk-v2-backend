@@ -90,7 +90,8 @@ public class ProfileApplicationService {
             auditLog.append(ActionType.USER_APPROVED, "user", userId);
         }
         ProfileDto dto = EntityMappers.toProfileDto(profile, hasGmailCredential(userId));
-        int kolsAssigned = teamService.assignKolsByOperatorName(userId, profile.getFeishuOperatorName());
+        int kolsAssigned = teamService.reconcileAndAssignKolsByOperatorName(
+                userId, profile.getFeishuOperatorName()).assigned();
         if (kolsAssigned > 0) {
             auditLog.append(
                     ActionType.KOL_CLAIMED,

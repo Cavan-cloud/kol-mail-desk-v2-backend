@@ -71,6 +71,22 @@ app.kubernetes.io/component: web
 {{- end }}
 
 {{/*
+Non-secret Feishu sync env vars for API and Worker.
+*/}}
+{{- define "maildesk.feishuEnv" -}}
+- name: FEISHU_SYNC_SOURCE
+  value: {{ .Values.config.feishuSyncSource | quote }}
+- name: FEISHU_TAB_FILTER
+  value: {{ .Values.config.feishuTabFilter | quote }}
+- name: FEISHU_REGIONAL_TAB_NAMES
+  value: {{ .Values.config.feishuRegionalTabNames | quote }}
+- name: FEISHU_SHEET_RECENT_MONTHS
+  value: {{ .Values.config.feishuSheetRecentMonths | quote }}
+- name: FEISHU_FULL_SYNC
+  value: {{ .Values.config.feishuFullSync | quote }}
+{{- end }}
+
+{{/*
 Shared secret-backed env vars for API and Worker.
 */}}
 {{- define "maildesk.secretEnv" -}}

@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.lovart.maildesk.common.enums.EmailDirection;
 import com.lovart.maildesk.common.enums.KolStage;
-import com.lovart.maildesk.common.enums.KolStatus;
 import com.lovart.maildesk.common.feishu.FeishuCellExtractor;
 import com.lovart.maildesk.domain.email.entity.EmailDO;
 import com.lovart.maildesk.domain.email.mapper.EmailMapper;
@@ -84,14 +83,12 @@ public class GmailPersistService {
         String normalizedOperator = FeishuCellExtractor.normalizeOperatorName(operatorName == null ? "" : operatorName);
         Map<String, UUID> kolIdByEmail = new HashMap<>();
         Map<UUID, UUID> pendingOwnerClaimByKolId = new HashMap<>();
-        List<KolDO> newKolRows = new ArrayList<>();
 
         for (String email : orderedEmails) {
             List<KolDO> rows = candidatesByEmail.getOrDefault(email, List.of());
             if (!isFeishuBacked(rows)) {
                 continue;
             }
-            TouchAggregate agg = touchByEmail.get(email);
             KolDO owned = rows.stream().filter(r -> userId.equals(r.getOwnerUserId())).findFirst().orElse(null);
             if (owned != null) {
                 kolIdByEmail.put(email, owned.getId());
@@ -110,13 +107,15 @@ public class GmailPersistService {
                 pendingOwnerClaimByKolId.put(claimable.getId(), userId);
                 continue;
             }
-            KolDO created = newKol(email, operatorName, userId, agg);
-            newKolRows.add(created);
-        }
-
-        for (KolDO row : newKolRows) {
-            kols.insert(row);
-            kolIdByEmail.put(normalizeEmail(row.getEmail()), row.getId());
+            // Feishu-backed but no owner match: attach emails to the existing Feishu row only.
+            // Never create gmail duplicate rows when onboarding skipped feishu_operator_name.
+            KolDO feishuAnchor = rows.stream()
+                    .filter(r -> SOURCE_FEISHU.equals(r.getSource()) || r.getFeishuRecordId() != null)
+                    .findFirst()
+                    .orElse(null);
+            if (feishuAnchor != null) {
+                kolIdByEmail.put(email, feishuAnchor.getId());
+            }
         }
 
         int upsertedKols = 0;
@@ -234,26 +233,6 @@ public class GmailPersistService {
         }
         patch.put("updated_at", now);
         return patch;
-    }
-
-    private static KolDO newKol(String email, String operatorName, UUID userId, TouchAggregate agg) {
-        KolDO row = new KolDO();
-        row.setEmail(email);
-        row.setFeishuOperatorName(operatorName);
-        row.setName(email.split("@")[0]);
-        row.setHandle("@" + email.split("@")[0]);
-        row.setStage(KolStage.OUTREACH);
-        row.setStatus(KolStatus.ACTIVE);
-        row.setSource(SOURCE_GMAIL);
-        row.setOwnerUserId(userId);
-        if (agg.lastInbound != null) {
-            row.setLastInboundAt(OffsetDateTime.parse(agg.lastInbound));
-            row.setReplyResolved(false);
-        }
-        if (agg.lastOutbound != null) {
-            row.setLastOutboundAt(OffsetDateTime.parse(agg.lastOutbound));
-        }
-        return row;
     }
 
     /**

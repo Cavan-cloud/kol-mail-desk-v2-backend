@@ -10,6 +10,7 @@ import com.lovart.maildesk.common.enums.UserStatus;
 import com.lovart.maildesk.common.exception.BusinessException;
 import com.lovart.maildesk.domain.audit.entity.ActionDO;
 import com.lovart.maildesk.domain.audit.mapper.ActionMapper;
+import com.lovart.maildesk.domain.email.mapper.EmailMapper;
 import com.lovart.maildesk.domain.kol.entity.KolDO;
 import com.lovart.maildesk.domain.kol.mapper.KolMapper;
 import com.lovart.maildesk.domain.profile.entity.ProfileDO;
@@ -39,6 +40,9 @@ class TeamApplicationServicePoolAssignTest {
     private KolMapper kols;
 
     @Mock
+    private EmailMapper emails;
+
+    @Mock
     private com.lovart.maildesk.domain.credential.mapper.IntegrationCredentialMapper credentials;
 
     @Mock
@@ -51,7 +55,7 @@ class TeamApplicationServicePoolAssignTest {
 
     @BeforeEach
     void setUp() {
-        service = new TeamApplicationService(profiles, kols, credentials, new AuditLogService(actions));
+        service = new TeamApplicationService(profiles, kols, emails, credentials, new AuditLogService(actions));
         leaderId = UUID.randomUUID();
         assigneeId = UUID.randomUUID();
         kolId = UUID.randomUUID();

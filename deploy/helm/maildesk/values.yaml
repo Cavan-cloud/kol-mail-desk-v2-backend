@@ -25,6 +25,12 @@ config:
   webRedirectUrl: ""
   sessionCookieSecure: "true"
   sessionCookieSameSite: Lax
+  # Feishu sync (non-secret; credentials via secrets.* / maildesk-secrets)
+  feishuSyncSource: sheet
+  feishuTabFilter: roster
+  feishuRegionalTabNames: "欧美,拉美,韩国"
+  feishuSheetRecentMonths: "2"
+  feishuFullSync: "true"
 
 database:
   host: ""
