@@ -21,6 +21,8 @@ config:
   aiDefaultProvider: moonshot
   moonshotBaseUrl: https://api.moonshot.cn/v1
   deepseekBaseUrl: https://api.deepseek.com
+  # false = Gmail sync skips LLM classification (direction-only needs-reply)
+  gmailAiClassificationEnabled: "false"
   corsAllowedOrigins: ""
   webRedirectUrl: ""
   sessionCookieSecure: "true"

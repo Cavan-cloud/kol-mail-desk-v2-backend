@@ -66,6 +66,8 @@ spec:
               value: {{ .Values.config.moonshotBaseUrl | quote }}
             - name: DEEPSEEK_BASE_URL
               value: {{ .Values.config.deepseekBaseUrl | quote }}
+            - name: GMAIL_AI_CLASSIFICATION_ENABLED
+              value: {{ .Values.config.gmailAiClassificationEnabled | default "false" | quote }}
             - name: CORS_ALLOWED_ORIGINS
               value: {{ required "config.corsAllowedOrigins is required for API" .Values.config.corsAllowedOrigins | quote }}
             - name: WEB_REDIRECT_URL

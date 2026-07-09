@@ -66,6 +66,8 @@ spec:
               value: {{ .Values.config.moonshotBaseUrl | quote }}
             - name: DEEPSEEK_BASE_URL
               value: {{ .Values.config.deepseekBaseUrl | quote }}
+            - name: GMAIL_AI_CLASSIFICATION_ENABLED
+              value: {{ .Values.config.gmailAiClassificationEnabled | default "false" | quote }}
             {{- include "maildesk.feishuEnv" . | nindent 12 }}
             {{- include "maildesk.secretEnv" . | nindent 12 }}
           livenessProbe:
