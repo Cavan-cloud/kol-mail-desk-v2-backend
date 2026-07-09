@@ -18,7 +18,7 @@ serviceAccount:
 config:
   springProfilesActive: prod
   defaultTenantId: "00000000-0000-0000-0000-000000000001"
-  aiDefaultProvider: moonshot
+  aiDefaultProvider: deepseek
   moonshotBaseUrl: https://api.moonshot.cn/v1
   deepseekBaseUrl: https://api.deepseek.com
   # false = Gmail sync skips LLM classification (direction-only needs-reply)
