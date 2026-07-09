@@ -16,7 +16,8 @@ public record FeishuKolDraft(
         String primaryPlatform,
         String handle,
         String type,
-        BigDecimal agreedPrice,
+        String brandQuote,
+        BigDecimal finalCooperationPrice,
         KolStage stage,
         LocalDate feishuOutreachAt,
         String notes) {
@@ -27,5 +28,15 @@ public record FeishuKolDraft(
         }
         int at = email.indexOf('@');
         return at > 0 ? email.substring(0, at) : email;
+    }
+
+    /**
+     * Best numeric price for templates: final cooperation price first, else parsed brand quote.
+     */
+    public BigDecimal agreedPrice() {
+        if (finalCooperationPrice != null) {
+            return finalCooperationPrice;
+        }
+        return FeishuRowMapper.parsePrice(brandQuote);
     }
 }

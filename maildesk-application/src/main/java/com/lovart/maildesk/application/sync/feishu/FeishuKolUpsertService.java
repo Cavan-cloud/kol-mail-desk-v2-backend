@@ -124,6 +124,8 @@ public class FeishuKolUpsertService {
         row.setPrimaryPlatform(Platform.fromDbValue(draft.primaryPlatform()));
         row.setType(draft.type());
         row.setExternalProfileUrl(draft.profileUrl());
+        row.setBrandQuote(draft.brandQuote());
+        row.setFinalCooperationPrice(draft.finalCooperationPrice());
         row.setAgreedPrice(draft.agreedPrice());
         row.setNotes(draft.notes());
         row.setSource(SOURCE_FEISHU);

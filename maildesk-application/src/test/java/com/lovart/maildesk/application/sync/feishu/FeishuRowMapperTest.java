@@ -39,6 +39,8 @@ class FeishuRowMapperTest {
         assertThat(draft.profileUrl()).isEqualTo("https://www.tiktok.com/@alice");
         assertThat(draft.primaryPlatform()).isEqualTo("tiktok");
         assertThat(draft.type()).isEqualTo("美妆");
+        assertThat(draft.brandQuote()).isEqualTo("USD 1200");
+        assertThat(draft.finalCooperationPrice()).isNull();
         assertThat(draft.agreedPrice()).isEqualByComparingTo(new BigDecimal("1200"));
         assertThat(draft.stage()).isEqualTo(KolStage.NEGOTIATING);
         assertThat(draft.feishuOutreachAt()).isEqualTo(LocalDate.of(2026, 3, 15));

@@ -70,7 +70,7 @@ class GmailSendApplicationServiceTest {
         GmailSendPersistenceService persistence =
                 new GmailSendPersistenceService(emails, kols, templates, auditLog);
         GmailProperties properties =
-                new GmailProperties("client-id", "client-secret", java.time.Duration.ofSeconds(5), java.time.Duration.ofSeconds(5), 1);
+                new GmailProperties("client-id", "client-secret", java.time.Duration.ofSeconds(5), java.time.Duration.ofSeconds(5), 1, true);
         GmailSendExecutor executor = new GmailSendExecutor(
                 kols, profiles, credentials, gmailClient, properties, persistence, auditLog);
         service = new GmailSendApplicationService(executor);

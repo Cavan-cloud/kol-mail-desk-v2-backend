@@ -57,7 +57,9 @@ public final class FeishuBitableRowMapper {
 
         String handle = name.isBlank() ? null : name;
         String type = blankToNull(FeishuFieldResolver.pickField(fields, headers.type()));
-        BigDecimal price = FeishuRowMapper.parsePrice(FeishuFieldResolver.pickField(fields, headers.price()));
+        String brandQuote = blankToNull(FeishuFieldResolver.pickField(fields, headers.brandQuote()));
+        BigDecimal finalCooperationPrice = FeishuRowMapper.parsePrice(
+                FeishuFieldResolver.pickField(fields, headers.finalCooperationPrice()));
         KolStage stage = FeishuStageMapper.mapFeishuStage(FeishuFieldResolver.pickField(fields, headers.stage()));
         var outreachAt = FeishuDateParser.parseFeishuDate(
                 FeishuFieldResolver.pickField(fields, headers.outreachDate()), tableName);
@@ -71,7 +73,8 @@ public final class FeishuBitableRowMapper {
                 platform,
                 handle,
                 type,
-                price,
+                brandQuote,
+                finalCooperationPrice,
                 stage,
                 outreachAt,
                 notes));
@@ -82,7 +85,8 @@ public final class FeishuBitableRowMapper {
         appendNote(lines, "合作状态", FeishuFieldResolver.pickField(fields, headers.cooperation()));
         appendNote(lines, "是否最终合作", FeishuFieldResolver.pickField(fields, headers.finalCooperation()));
         appendNote(lines, "合作进展", FeishuFieldResolver.pickField(fields, headers.stage()));
-        appendNote(lines, "报价", FeishuFieldResolver.pickField(fields, headers.price()));
+        appendNote(lines, "品牌报价", FeishuFieldResolver.pickField(fields, headers.brandQuote()));
+        appendNote(lines, "最终合作价格", FeishuFieldResolver.pickField(fields, headers.finalCooperationPrice()));
         appendNote(lines, "粉丝数", FeishuFieldResolver.pickField(fields, headers.followers()));
         appendNote(lines, "国家", FeishuFieldResolver.pickField(fields, headers.country()));
         appendNote(lines, "语言", FeishuFieldResolver.pickField(fields, headers.language()));

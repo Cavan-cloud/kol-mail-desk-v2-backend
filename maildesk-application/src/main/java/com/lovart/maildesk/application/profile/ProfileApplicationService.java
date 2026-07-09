@@ -73,12 +73,16 @@ public class ProfileApplicationService {
         }
 
         UUID mentorUserId = resolveMentorUserId(userId, role, request.mentorUserId());
+        String feishuOperatorName = normalizeFeishuOperatorName(request.feishuOperatorName());
+        if (feishuOperatorName == null) {
+            throw new BusinessException("VALIDATION_ERROR", "请填写飞书运营名");
+        }
         boolean wasPendingApproval = UserStatus.PENDING_APPROVAL.dbValue().equals(profile.getStatus());
 
         profile.setDisplayName(request.displayName().trim());
         profile.setRole(role.dbValue());
         profile.setMentorUserId(mentorUserId);
-        profile.setFeishuOperatorName(normalizeFeishuOperatorName(request.feishuOperatorName()));
+        profile.setFeishuOperatorName(feishuOperatorName);
 
         if (UserStatus.PENDING_APPROVAL.dbValue().equals(profile.getStatus())) {
             profile.setStatus(UserStatus.ACTIVE.dbValue());

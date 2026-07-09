@@ -15,6 +15,7 @@ public record TeamProfileUpdateRequest(
         @NotNull(message = "请选择角色")
         UserRole role,
         UUID mentorUserId,
+        @NotBlank(message = "请填写飞书运营名")
         String feishuOperatorName
 ) {
 }

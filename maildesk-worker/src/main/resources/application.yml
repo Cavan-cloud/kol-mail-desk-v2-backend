@@ -96,6 +96,7 @@ maildesk:
     connect-timeout: 10s
     read-timeout: 30s
     max-retries: 3
+    ai-classification-enabled: ${GMAIL_AI_CLASSIFICATION_ENABLED:false}
 
   ai:
     enabled: true

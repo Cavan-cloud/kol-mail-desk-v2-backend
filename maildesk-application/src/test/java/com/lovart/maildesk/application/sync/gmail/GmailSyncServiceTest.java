@@ -22,6 +22,7 @@ import com.lovart.maildesk.domain.kol.entity.KolDO;
 import com.lovart.maildesk.domain.kol.mapper.KolMapper;
 import com.lovart.maildesk.domain.profile.entity.ProfileDO;
 import com.lovart.maildesk.domain.profile.mapper.ProfileMapper;
+import com.lovart.maildesk.integration.gmail.GmailProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -80,7 +81,7 @@ class GmailSyncServiceTest {
     void setUp() {
         when(meterRegistryProvider.getIfAvailable()).thenReturn(null);
         MaildeskMetrics metrics = new MaildeskMetrics(meterRegistryProvider);
-        classificationService = new GmailEmailClassificationService(buildAiService());
+        classificationService = new GmailEmailClassificationService(buildAiService(), gmailProperties(true));
         persistService = new GmailPersistService(kols, emails, new ObjectMapper());
         service = new GmailSyncService(
                 gmailClient, credentials, profiles, emails, persistService, classificationService, metrics);
@@ -193,6 +194,48 @@ class GmailSyncServiceTest {
 
         assertThat(result.status()).isEqualTo("synced");
         verify(moonshotModel, never()).call(any(Prompt.class));
+    }
+
+    @Test
+    void sync_skipsLlmWhenAiClassificationDisabled() {
+        MaildeskMetrics metrics = new MaildeskMetrics(meterRegistryProvider);
+        classificationService = new GmailEmailClassificationService(buildAiService(), gmailProperties(false));
+        service = new GmailSyncService(
+                gmailClient, credentials, profiles, emails, persistService, classificationService, metrics);
+
+        ProfileDO profile = profile();
+        profile.setId(userId);
+        profile.setLastSyncedHistoryId("9000");
+        when(profiles.selectById(userId)).thenReturn(profile);
+        when(credentials.resolveAccessToken(userId)).thenReturn(Optional.of(new GoogleAccessToken("token")));
+        when(gmailClient.listIncrementalMessageIds("token", "9000", 50))
+                .thenReturn(new GmailHistoryPage(List.of("msg-new"), "history"));
+        when(gmailClient.getMessage("token", "msg-new")).thenReturn(sampleMessage("msg-new", "9002"));
+        when(emails.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of());
+
+        KolDO kol = new KolDO();
+        kol.setId(UUID.randomUUID());
+        kol.setEmail("creator@example.com");
+        kol.setSource("feishu");
+        kol.setFeishuRecordId("rec-1");
+        kol.setOwnerUserId(userId);
+        when(kols.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(kol));
+
+        GmailSyncResult result = service.sync(userId, GmailSyncOptions.incremental());
+
+        assertThat(result.status()).isEqualTo("synced");
+        assertThat(result.insertedEmails()).isEqualTo(1);
+        verify(moonshotModel, never()).call(any(Prompt.class));
+    }
+
+    private static GmailProperties gmailProperties(boolean aiClassificationEnabled) {
+        return new GmailProperties(
+                "client-id",
+                "client-secret",
+                java.time.Duration.ofSeconds(5),
+                java.time.Duration.ofSeconds(5),
+                1,
+                aiClassificationEnabled);
     }
 
     private AiService buildAiService() {

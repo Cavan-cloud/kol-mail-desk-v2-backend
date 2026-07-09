@@ -95,6 +95,7 @@ class FeishuKolUpsertServiceTest {
                 null,
                 null,
                 null,
+                null,
                 LocalDate.of(2026, 1, 1),
                 null);
 
@@ -117,6 +118,7 @@ class FeishuKolUpsertServiceTest {
                 "alice@example.com",
                 "Bob",
                 "Feishu Name",
+                null,
                 null,
                 null,
                 null,
@@ -151,6 +153,7 @@ class FeishuKolUpsertServiceTest {
                 null,
                 null,
                 null,
+                null,
                 KolStage.CONFIRMED,
                 LocalDate.of(2026, 1, 1),
                 null);
@@ -178,6 +181,7 @@ class FeishuKolUpsertServiceTest {
                 "tiktok",
                 "Alice",
                 "美妆",
+                null,
                 new BigDecimal("100"),
                 stage,
                 LocalDate.of(2026, 3, 1),

@@ -113,7 +113,8 @@ public class EmailApplicationService {
             throw new BusinessException("VALIDATION_ERROR", "邮件正文为空，无法重新分析");
         }
 
-        GmailAiFallback.GmailAiFields ai = classificationService.classify(toGmailMessage(email), email.getDirection());
+        GmailAiFallback.GmailAiFields ai =
+                classificationService.classify(toGmailMessage(email), email.getDirection(), true);
         applyClassification(email, ai);
         emails.updateById(email);
         return EntityMappers.toEmailDto(email);

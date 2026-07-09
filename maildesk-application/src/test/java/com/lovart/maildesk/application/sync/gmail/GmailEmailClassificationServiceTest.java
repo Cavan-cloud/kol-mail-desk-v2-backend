@@ -16,6 +16,7 @@ import com.lovart.maildesk.ai.prompt.AiPromptCatalog;
 import com.lovart.maildesk.common.enums.EmailDirection;
 import com.lovart.maildesk.common.enums.KolStage;
 import com.lovart.maildesk.domain.gmail.GmailFullMessage;
+import com.lovart.maildesk.integration.gmail.GmailProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,8 +47,17 @@ class GmailEmailClassificationServiceTest {
 
     private GmailEmailClassificationService service;
 
-    @BeforeEach
-    void setUp() {
+    private static GmailProperties gmailProperties(boolean aiClassificationEnabled) {
+        return new GmailProperties(
+                "client-id",
+                "client-secret",
+                java.time.Duration.ofSeconds(5),
+                java.time.Duration.ofSeconds(5),
+                1,
+                aiClassificationEnabled);
+    }
+
+    private AiService buildAiService() {
         AiProviderProperties properties = new AiProviderProperties();
         properties.setDefaultProvider("moonshot");
         AiProviderProperties.Provider moonshot = new AiProviderProperties.Provider();
@@ -61,14 +71,57 @@ class GmailEmailClassificationServiceTest {
 
         ObjectMapper objectMapper = new ObjectMapper();
         AiModelRouter router = new AiModelRouter(properties, Map.of("moonshot", moonshotModel));
-        AiService aiService = new AiService(
+        return new AiService(
                 new AiInvocationPipeline(router),
                 new AiPromptCatalog(),
                 new EmailClassificationParser(objectMapper),
                 new ReplyDraftParser(objectMapper),
                 new CheckDraftParser(objectMapper),
                 objectMapper);
-        service = new GmailEmailClassificationService(aiService);
+    }
+
+    @BeforeEach
+    void setUp() {
+        service = new GmailEmailClassificationService(buildAiService(), gmailProperties(true));
+    }
+
+    @Test
+    void usesDirectionOnlyWhenSyncAiDisabled() {
+        GmailEmailClassificationService disabled =
+                new GmailEmailClassificationService(buildAiService(), gmailProperties(false));
+
+        GmailAiFallback.GmailAiFields inbound = disabled.classify(sampleMessage(), EmailDirection.INBOUND);
+        GmailAiFallback.GmailAiFields outbound =
+                disabled.classify(sampleMessage(), EmailDirection.OUTBOUND);
+
+        assertThat(inbound.stageSignal()).isEqualTo(KolStage.REPLIED);
+        assertThat(inbound.summary()).isEqualTo("客户来信，待回复");
+        assertThat(inbound.aiError()).isNull();
+        assertThat(outbound.stageSignal()).isEqualTo(KolStage.OUTREACH);
+        assertThat(outbound.summary()).isEqualTo("我方已发送，等待对方回复");
+    }
+
+    @Test
+    void forceAiBypassesSyncDisableFlag() {
+        GmailEmailClassificationService disabled =
+                new GmailEmailClassificationService(buildAiService(), gmailProperties(false));
+        when(moonshotModel.call(any(Prompt.class)))
+                .thenReturn(llmResponse(
+                        """
+                        {
+                          "stage_signal": "negotiating",
+                          "priority": "high",
+                          "summary": "报价沟通",
+                          "extracted": {},
+                          "suggested_action": "确认报价"
+                        }
+                        """));
+
+        GmailAiFallback.GmailAiFields fields =
+                disabled.classify(sampleMessage(), EmailDirection.INBOUND, true);
+
+        assertThat(fields.stageSignal()).isEqualTo(KolStage.NEGOTIATING);
+        verify(moonshotModel).call(any(Prompt.class));
     }
 
     @Test

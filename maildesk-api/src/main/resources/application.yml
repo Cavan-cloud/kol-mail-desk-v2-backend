@@ -125,6 +125,8 @@ maildesk:
     connect-timeout: 10s
     read-timeout: 30s
     max-retries: 3
+    # false = Gmail 同步不调 LLM，仅按 inbound/outbound 区分待回复；手动「重新分析」仍走 AI
+    ai-classification-enabled: ${GMAIL_AI_CLASSIFICATION_ENABLED:false}
 
   ai:
     enabled: true

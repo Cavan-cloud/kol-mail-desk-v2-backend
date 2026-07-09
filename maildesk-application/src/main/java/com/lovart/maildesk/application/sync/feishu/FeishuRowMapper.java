@@ -57,7 +57,8 @@ public final class FeishuRowMapper {
 
         String handle = name.isBlank() ? null : name;
         String type = blankToNull(pick(row, columns.type()));
-        BigDecimal price = parsePrice(pick(row, columns.price()));
+        String brandQuote = blankToNull(pick(row, columns.brandQuote()));
+        BigDecimal finalCooperationPrice = parsePrice(pick(row, columns.finalCooperationPrice()));
         KolStage stage = FeishuStageMapper.mapFeishuStage(pick(row, columns.stage()));
         var outreachAt = FeishuDateParser.parseFeishuDate(pick(row, columns.outreachDate()), sheetTitle);
         String notes = buildNotes(row, columns);
@@ -70,7 +71,8 @@ public final class FeishuRowMapper {
                 platform,
                 handle,
                 type,
-                price,
+                brandQuote,
+                finalCooperationPrice,
                 stage,
                 outreachAt,
                 notes));
@@ -81,7 +83,8 @@ public final class FeishuRowMapper {
         appendNote(lines, "合作状态", pick(row, columns.cooperation()));
         appendNote(lines, "是否最终合作", pick(row, columns.finalCooperation()));
         appendNote(lines, "合作进展", pick(row, columns.stage()));
-        appendNote(lines, "报价", pick(row, columns.price()));
+        appendNote(lines, "品牌报价", pick(row, columns.brandQuote()));
+        appendNote(lines, "最终合作价格", pick(row, columns.finalCooperationPrice()));
         appendNote(lines, "粉丝数", pick(row, columns.followers()));
         appendNote(lines, "国家", pick(row, columns.country()));
         appendNote(lines, "语言", pick(row, columns.language()));

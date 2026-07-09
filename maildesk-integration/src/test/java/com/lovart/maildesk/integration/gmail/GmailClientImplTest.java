@@ -23,7 +23,7 @@ class GmailClientImplTest {
 
     @BeforeEach
     void setUp() {
-        properties = new GmailProperties("id", "secret", java.time.Duration.ofSeconds(5), java.time.Duration.ofSeconds(5), 1);
+        properties = new GmailProperties("id", "secret", java.time.Duration.ofSeconds(5), java.time.Duration.ofSeconds(5), 1, true);
         restTemplate = new RestTemplate();
         server = MockRestServiceServer.createServer(restTemplate);
         client = new GmailClientImpl(properties, new ObjectMapper(), restTemplate, new GmailMessageParser());

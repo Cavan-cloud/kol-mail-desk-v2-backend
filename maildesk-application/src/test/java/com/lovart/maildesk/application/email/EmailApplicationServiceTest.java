@@ -25,6 +25,7 @@ import com.lovart.maildesk.domain.email.mapper.EmailMapper;
 import com.lovart.maildesk.domain.kol.mapper.KolMapper;
 import com.lovart.maildesk.domain.profile.entity.ProfileDO;
 import com.lovart.maildesk.domain.profile.mapper.ProfileMapper;
+import com.lovart.maildesk.integration.gmail.GmailProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -76,7 +77,7 @@ class EmailApplicationServiceTest {
     void setUp() {
         auditLog = new AuditLogService(actions);
         GmailEmailClassificationService classificationService =
-                new GmailEmailClassificationService(buildAiService());
+                new GmailEmailClassificationService(buildAiService(), gmailProperties(true));
         service = new EmailApplicationService(emails, kols, profiles, classificationService, auditLog);
         userId = UUID.randomUUID();
         emailId = UUID.randomUUID();
@@ -259,6 +260,16 @@ class EmailApplicationServiceTest {
         email.setBodyText("Please share your rate card.");
         email.setSentAt(OffsetDateTime.now(ZoneOffset.UTC));
         return email;
+    }
+
+    private static GmailProperties gmailProperties(boolean aiClassificationEnabled) {
+        return new GmailProperties(
+                "client-id",
+                "client-secret",
+                java.time.Duration.ofSeconds(5),
+                java.time.Duration.ofSeconds(5),
+                1,
+                aiClassificationEnabled);
     }
 
     private AiService buildAiService() {

@@ -22,6 +22,8 @@ public record KolDto(
         OffsetDateTime lastInboundAt,
         OffsetDateTime lastOutboundAt,
         BigDecimal agreedPrice,
+        String brandQuote,
+        BigDecimal finalCooperationPrice,
         LocalDate agreedDeadline,
         String notes,
         boolean replyResolved,

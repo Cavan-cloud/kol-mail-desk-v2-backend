@@ -50,7 +50,7 @@ class GoogleCredentialServiceTest {
     @Test
     void resolveAccessToken_returnsCachedTokenWhenNotExpired() throws Exception {
         GmailProperties props = new GmailProperties("client-id", "client-secret", java.time.Duration.ofSeconds(5),
-                java.time.Duration.ofSeconds(5), 1);
+                java.time.Duration.ofSeconds(5), 1, true);
         service = new GoogleCredentialService(credentials, encryption, props, new ObjectMapper(), new RestTemplate());
 
         String json = """
@@ -67,7 +67,7 @@ class GoogleCredentialServiceTest {
     @Test
     void resolveAccessToken_refreshesWhenExpired() throws Exception {
         GmailProperties props = new GmailProperties("client-id", "client-secret", java.time.Duration.ofSeconds(5),
-                java.time.Duration.ofSeconds(5), 1);
+                java.time.Duration.ofSeconds(5), 1, true);
         RestTemplate restTemplate = new RestTemplate();
         MockRestServiceServer server = MockRestServiceServer.createServer(restTemplate);
         service = new GoogleCredentialService(credentials, encryption, props, new ObjectMapper(), restTemplate);

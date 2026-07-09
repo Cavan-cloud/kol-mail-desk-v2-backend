@@ -38,6 +38,8 @@ class FeishuBitableRowMapperTest {
         assertThat(draft.profileUrl()).isEqualTo("https://www.tiktok.com/@alice");
         assertThat(draft.primaryPlatform()).isEqualTo("tiktok");
         assertThat(draft.type()).isEqualTo("美妆");
+        assertThat(draft.brandQuote()).isEqualTo("1200");
+        assertThat(draft.finalCooperationPrice()).isNull();
         assertThat(draft.agreedPrice()).isEqualByComparingTo(new BigDecimal("1200"));
         assertThat(draft.stage()).isEqualTo(KolStage.NEGOTIATING);
         assertThat(draft.notes()).contains("国家: 美国");
@@ -48,5 +50,21 @@ class FeishuBitableRowMapperTest {
         FeishuBitableRecord record = new FeishuBitableRecord("rec1", Map.of("KOL账户名", "Alice"));
 
         assertThat(FeishuBitableRowMapper.mapRecord(record, FeishuFieldHeaders.defaults(), "7月")).isEmpty();
+    }
+
+    @Test
+    void prefersFinalCooperationPriceOverBrandQuote() {
+        Map<String, Object> fields = new HashMap<>();
+        fields.put("KOL联系方式", "bob@example.com");
+        fields.put("品牌报价", "USD 800");
+        fields.put("最终合作价格", 1000);
+        FeishuBitableRecord record = new FeishuBitableRecord("rec2", fields);
+
+        FeishuKolDraft draft = FeishuBitableRowMapper.mapRecord(record, FeishuFieldHeaders.defaults(), "7月")
+                .orElseThrow();
+
+        assertThat(draft.brandQuote()).isEqualTo("USD 800");
+        assertThat(draft.finalCooperationPrice()).isEqualByComparingTo(new BigDecimal("1000"));
+        assertThat(draft.agreedPrice()).isEqualByComparingTo(new BigDecimal("1000"));
     }
 }

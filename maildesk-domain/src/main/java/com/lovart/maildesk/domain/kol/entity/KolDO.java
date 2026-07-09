@@ -68,6 +68,12 @@ public class KolDO {
     @TableField("agreed_price")
     private BigDecimal agreedPrice;
 
+    @TableField("brand_quote")
+    private String brandQuote;
+
+    @TableField("final_cooperation_price")
+    private BigDecimal finalCooperationPrice;
+
     @TableField(value = "agreed_platform", typeHandler = PlatformTypeHandler.class)
     private Platform agreedPlatform;
 
@@ -225,6 +231,22 @@ public class KolDO {
 
     public void setAgreedPrice(BigDecimal agreedPrice) {
         this.agreedPrice = agreedPrice;
+    }
+
+    public String getBrandQuote() {
+        return brandQuote;
+    }
+
+    public void setBrandQuote(String brandQuote) {
+        this.brandQuote = brandQuote;
+    }
+
+    public BigDecimal getFinalCooperationPrice() {
+        return finalCooperationPrice;
+    }
+
+    public void setFinalCooperationPrice(BigDecimal finalCooperationPrice) {
+        this.finalCooperationPrice = finalCooperationPrice;
     }
 
     public Platform getAgreedPlatform() {

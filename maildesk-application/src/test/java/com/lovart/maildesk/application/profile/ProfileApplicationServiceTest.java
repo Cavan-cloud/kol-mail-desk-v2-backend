@@ -81,7 +81,7 @@ class ProfileApplicationServiceTest {
 
         assertThatThrownBy(() -> service.updateOwnProfile(
                         userId,
-                        new TeamProfileUpdateRequest("Chloe", UserRole.LEADER, null, null)))
+                        new TeamProfileUpdateRequest("Chloe", UserRole.LEADER, null, "王雨")))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo("FORBIDDEN");
@@ -96,10 +96,24 @@ class ProfileApplicationServiceTest {
 
         var result = service.updateOwnProfile(
                 userId,
-                new TeamProfileUpdateRequest("Chloe", UserRole.LEADER, null, null));
+                new TeamProfileUpdateRequest("Chloe", UserRole.LEADER, null, "王雨"));
 
         assertThat(result.profile().role()).isEqualTo("leader");
         verify(actions).insert(any(ActionDO.class));
+    }
+
+    @Test
+    void updateOwnProfile_rejectsMissingFeishuOperatorName() {
+        ProfileDO profile = activeProfile("full_time");
+        profile.setStatus(UserStatus.PENDING_APPROVAL.dbValue());
+        when(profiles.selectById(userId)).thenReturn(profile);
+
+        assertThatThrownBy(() -> service.updateOwnProfile(
+                        userId,
+                        new TeamProfileUpdateRequest("Chloe", UserRole.FULL_TIME, null, "  ")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getMessage())
+                .isEqualTo("请填写飞书运营名");
     }
 
     @Test
@@ -110,7 +124,7 @@ class ProfileApplicationServiceTest {
 
         assertThatThrownBy(() -> service.updateOwnProfile(
                         userId,
-                        new TeamProfileUpdateRequest("Chloe", UserRole.FULL_TIME, null, null)))
+                        new TeamProfileUpdateRequest("Chloe", UserRole.FULL_TIME, null, "王雨")))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).errorCode())
                 .isEqualTo("FORBIDDEN");
@@ -124,7 +138,7 @@ class ProfileApplicationServiceTest {
 
         assertThatThrownBy(() -> service.updateOwnProfile(
                         userId,
-                        new TeamProfileUpdateRequest("Chloe", UserRole.INTERN, null, null)))
+                        new TeamProfileUpdateRequest("Chloe", UserRole.INTERN, null, "王雨")))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getMessage())
                 .isEqualTo("实习生必须选择 mentor");

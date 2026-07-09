@@ -28,6 +28,29 @@ public final class GmailAiFallback {
         return new GmailAiFields(null, null, null, null, null, null);
     }
 
+    /**
+     * Direction-only classification when sync AI is disabled. Needs-reply for a KOL is determined
+     * elsewhere from the latest inbound/outbound email; this only fills lightweight AI metadata fields.
+     */
+    public static GmailAiFields fromDirectionOnly(EmailDirection direction) {
+        if (direction == EmailDirection.OUTBOUND) {
+            return new GmailAiFields(
+                    KolStage.OUTREACH,
+                    "low",
+                    "我方已发送，等待对方回复",
+                    null,
+                    "等待对方回复",
+                    null);
+        }
+        return new GmailAiFields(
+                KolStage.REPLIED,
+                "medium",
+                "客户来信，待回复",
+                null,
+                "撰写回复",
+                null);
+    }
+
     /** @deprecated Prefer {@link GmailEmailClassificationService} which calls {@code AiService}. */
     @Deprecated
     public static GmailAiFields classify(EmailDirection direction) {

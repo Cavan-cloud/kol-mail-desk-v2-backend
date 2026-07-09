@@ -35,7 +35,8 @@ final class GmailSmokeEnv {
                 "",
                 java.time.Duration.ofSeconds(10),
                 java.time.Duration.ofSeconds(60),
-                3);
+                3,
+                true);
         return new GmailClientImpl(properties, new ObjectMapper(), new RestTemplate(), new GmailMessageParser());
     }
 
