@@ -67,4 +67,20 @@ class FeishuBitableRowMapperTest {
         assertThat(draft.finalCooperationPrice()).isEqualByComparingTo(new BigDecimal("1000"));
         assertThat(draft.agreedPrice()).isEqualByComparingTo(new BigDecimal("1000"));
     }
+
+    @Test
+    void fallsBackToKolQuoteWhenBrandQuoteBlank() {
+        Map<String, Object> fields = new HashMap<>();
+        fields.put("KOL联系方式", "carol@example.com");
+        fields.put("品牌报价", "");
+        fields.put("KOL报价($)", 650);
+        fields.put("最终报价", "900");
+        FeishuBitableRecord record = new FeishuBitableRecord("rec3", fields);
+
+        FeishuKolDraft draft = FeishuBitableRowMapper.mapRecord(record, FeishuFieldHeaders.defaults(), "7月")
+                .orElseThrow();
+
+        assertThat(draft.brandQuote()).isEqualTo("650");
+        assertThat(draft.finalCooperationPrice()).isEqualByComparingTo(new BigDecimal("900"));
+    }
 }

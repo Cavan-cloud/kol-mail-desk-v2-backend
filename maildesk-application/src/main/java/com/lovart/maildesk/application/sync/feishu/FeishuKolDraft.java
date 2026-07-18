@@ -39,4 +39,34 @@ public record FeishuKolDraft(
         }
         return FeishuRowMapper.parsePrice(brandQuote);
     }
+
+    /**
+     * Prefer the draft that carries more price information when the same email|operator
+     * appears across multiple Feishu tabs (month sheets are scanned before regional tabs).
+     */
+    public static FeishuKolDraft preferRicherPrices(FeishuKolDraft current, FeishuKolDraft incoming) {
+        if (current == null) {
+            return incoming;
+        }
+        if (incoming == null) {
+            return current;
+        }
+        int currentScore = priceScore(current);
+        int incomingScore = priceScore(incoming);
+        if (incomingScore > currentScore) {
+            return incoming;
+        }
+        return current;
+    }
+
+    private static int priceScore(FeishuKolDraft draft) {
+        int score = 0;
+        if (draft.brandQuote() != null && !draft.brandQuote().isBlank()) {
+            score += 1;
+        }
+        if (draft.finalCooperationPrice() != null) {
+            score += 2;
+        }
+        return score;
+    }
 }

@@ -57,11 +57,13 @@ public final class FeishuRowMapper {
 
         String handle = name.isBlank() ? null : name;
         String type = blankToNull(pick(row, columns.type()));
-        String brandQuote = blankToNull(pick(row, columns.brandQuote()));
+        String brandQuote = firstNonBlank(
+                pick(row, columns.brandQuote()),
+                pick(row, columns.kolQuote()));
         BigDecimal finalCooperationPrice = parsePrice(pick(row, columns.finalCooperationPrice()));
         KolStage stage = FeishuStageMapper.mapFeishuStage(pick(row, columns.stage()));
         var outreachAt = FeishuDateParser.parseFeishuDate(pick(row, columns.outreachDate()), sheetTitle);
-        String notes = buildNotes(row, columns);
+        String notes = buildNotes(row, columns, brandQuote);
 
         return Optional.of(new FeishuKolDraft(
                 email,
@@ -78,12 +80,12 @@ public final class FeishuRowMapper {
                 notes));
     }
 
-    private static String buildNotes(List<?> row, FeishuColumnIndex columns) {
+    private static String buildNotes(List<?> row, FeishuColumnIndex columns, String brandQuote) {
         List<String> lines = new ArrayList<>();
         appendNote(lines, "合作状态", pick(row, columns.cooperation()));
         appendNote(lines, "是否最终合作", pick(row, columns.finalCooperation()));
         appendNote(lines, "合作进展", pick(row, columns.stage()));
-        appendNote(lines, "品牌报价", pick(row, columns.brandQuote()));
+        appendNote(lines, "品牌报价", brandQuote);
         appendNote(lines, "最终合作价格", pick(row, columns.finalCooperationPrice()));
         appendNote(lines, "粉丝数", pick(row, columns.followers()));
         appendNote(lines, "国家", pick(row, columns.country()));
@@ -123,5 +125,15 @@ public final class FeishuRowMapper {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private static String firstNonBlank(String primary, String fallback) {
+        if (primary != null && !primary.isBlank()) {
+            return primary.trim();
+        }
+        if (fallback != null && !fallback.isBlank()) {
+            return fallback.trim();
+        }
+        return null;
     }
 }

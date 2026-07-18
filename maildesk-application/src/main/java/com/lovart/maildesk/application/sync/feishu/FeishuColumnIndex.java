@@ -14,6 +14,8 @@ public record FeishuColumnIndex(
         Integer type,
         Integer followers,
         Integer brandQuote,
+        /** Secondary quote column (e.g. {@code KOL报价($)}) when {@code brandQuote} cell is blank. */
+        Integer kolQuote,
         Integer finalCooperationPrice,
         Integer cooperation,
         Integer finalCooperation,

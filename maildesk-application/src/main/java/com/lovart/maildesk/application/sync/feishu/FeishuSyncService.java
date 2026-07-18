@@ -130,7 +130,7 @@ public class FeishuSyncService {
                 scannedRows++;
                 FeishuBitableRowMapper.mapRecord(record, headers, table.name()).ifPresent(draft -> {
                     String key = FeishuCellExtractor.mergeKey(draft.email(), draft.operatorName());
-                    merged.putIfAbsent(key, draft);
+                    merged.merge(key, draft, FeishuKolDraft::preferRicherPrices);
                 });
 
                 if (opts.maxRecords() != null && merged.size() >= opts.maxRecords()) {
@@ -200,7 +200,7 @@ public class FeishuSyncService {
 
                 FeishuRowMapper.mapRow(row, columns, sheet.title()).ifPresent(draft -> {
                     String key = FeishuCellExtractor.mergeKey(draft.email(), draft.operatorName());
-                    merged.putIfAbsent(key, draft);
+                    merged.merge(key, draft, FeishuKolDraft::preferRicherPrices);
                 });
 
                 if (opts.maxRecords() != null && merged.size() >= opts.maxRecords()) {

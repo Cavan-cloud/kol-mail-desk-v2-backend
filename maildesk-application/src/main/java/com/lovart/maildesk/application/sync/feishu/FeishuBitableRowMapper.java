@@ -57,13 +57,15 @@ public final class FeishuBitableRowMapper {
 
         String handle = name.isBlank() ? null : name;
         String type = blankToNull(FeishuFieldResolver.pickField(fields, headers.type()));
-        String brandQuote = blankToNull(FeishuFieldResolver.pickField(fields, headers.brandQuote()));
+        // Skip keys containing「最终」so「最终报价」is not stolen by brandQuote candidate「报价」.
+        String brandQuote = blankToNull(FeishuFieldResolver.pickFirstNonBlank(
+                fields, headers.brandQuote(), List.of("最终")));
         BigDecimal finalCooperationPrice = FeishuRowMapper.parsePrice(
-                FeishuFieldResolver.pickField(fields, headers.finalCooperationPrice()));
+                FeishuFieldResolver.pickFirstNonBlank(fields, headers.finalCooperationPrice(), List.of()));
         KolStage stage = FeishuStageMapper.mapFeishuStage(FeishuFieldResolver.pickField(fields, headers.stage()));
         var outreachAt = FeishuDateParser.parseFeishuDate(
                 FeishuFieldResolver.pickField(fields, headers.outreachDate()), tableName);
-        String notes = buildNotes(fields, headers);
+        String notes = buildNotes(fields, headers, brandQuote);
 
         return Optional.of(new FeishuKolDraft(
                 email,
@@ -80,13 +82,14 @@ public final class FeishuBitableRowMapper {
                 notes));
     }
 
-    private static String buildNotes(Map<String, Object> fields, FeishuFieldHeaders headers) {
+    private static String buildNotes(Map<String, Object> fields, FeishuFieldHeaders headers, String brandQuote) {
         List<String> lines = new ArrayList<>();
         appendNote(lines, "合作状态", FeishuFieldResolver.pickField(fields, headers.cooperation()));
         appendNote(lines, "是否最终合作", FeishuFieldResolver.pickField(fields, headers.finalCooperation()));
         appendNote(lines, "合作进展", FeishuFieldResolver.pickField(fields, headers.stage()));
-        appendNote(lines, "品牌报价", FeishuFieldResolver.pickField(fields, headers.brandQuote()));
-        appendNote(lines, "最终合作价格", FeishuFieldResolver.pickField(fields, headers.finalCooperationPrice()));
+        appendNote(lines, "品牌报价", brandQuote);
+        appendNote(lines, "最终合作价格", FeishuFieldResolver.pickFirstNonBlank(
+                fields, headers.finalCooperationPrice(), List.of()));
         appendNote(lines, "粉丝数", FeishuFieldResolver.pickField(fields, headers.followers()));
         appendNote(lines, "国家", FeishuFieldResolver.pickField(fields, headers.country()));
         appendNote(lines, "语言", FeishuFieldResolver.pickField(fields, headers.language()));

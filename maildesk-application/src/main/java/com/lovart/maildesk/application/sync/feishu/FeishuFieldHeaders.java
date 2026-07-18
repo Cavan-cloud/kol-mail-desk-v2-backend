@@ -35,8 +35,9 @@ public record FeishuFieldHeaders(
                 List.of("语言"),
                 List.of("频道类型", "类型"),
                 List.of("粉丝数", "主平台粉丝数"),
-                List.of("品牌报价", "KOL报价($)", "报价"),
-                List.of("最终合作价格"),
+                // Prefer brand-side quote; KOL报价($) / 合作报价 are cell-level fallbacks in mappers.
+                List.of("品牌报价", "KOL报价($)", "合作报价（$）", "合作报价($)", "报价"),
+                List.of("最终合作价格", "最终报价"),
                 List.of("合作状态", "当前状态"),
                 List.of("是否最终合作"),
                 List.of("状态", "合作进展", "合作状态"),

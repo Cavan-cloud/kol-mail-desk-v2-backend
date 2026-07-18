@@ -79,4 +79,36 @@ class FeishuRowMapperTest {
         assertThat(FeishuRowMapper.parsePrice("¥5,000.50")).isEqualByComparingTo(new BigDecimal("5000.50"));
         assertThat(FeishuRowMapper.parsePrice("")).isNull();
     }
+
+    @Test
+    void fallsBackToKolQuoteWhenBrandQuoteCellBlank() {
+        List<String> header = List.of(
+                "KOL用户名", "联系方式", "运营", "品牌报价", "KOL报价($)", "最终合作价格", "状态");
+        FeishuColumnIndex columns = FeishuColumnResolver.resolve(header, FeishuFieldHeaders.defaults());
+        assertThat(columns.brandQuote()).isEqualTo(3);
+        assertThat(columns.kolQuote()).isEqualTo(4);
+        assertThat(columns.finalCooperationPrice()).isEqualTo(5);
+
+        List<Object> row = List.of("Alice", "alice@example.com", "@Bob", "", "900", "1100", "议价中");
+        FeishuKolDraft draft = FeishuRowMapper.mapRow(row, columns, "7月").orElseThrow();
+
+        assertThat(draft.brandQuote()).isEqualTo("900");
+        assertThat(draft.finalCooperationPrice()).isEqualByComparingTo(new BigDecimal("1100"));
+        assertThat(draft.agreedPrice()).isEqualByComparingTo(new BigDecimal("1100"));
+    }
+
+    @Test
+    void mapsFinalQuoteHeaderWithoutStealingIntoBrandQuote() {
+        List<String> header = List.of("联系方式", "运营", "报价", "最终报价");
+        FeishuColumnIndex columns = FeishuColumnResolver.resolve(header, FeishuFieldHeaders.defaults());
+
+        assertThat(columns.brandQuote()).isEqualTo(2);
+        assertThat(columns.finalCooperationPrice()).isEqualTo(3);
+
+        List<Object> row = List.of("alice@example.com", "@Bob", "800", "1000");
+        FeishuKolDraft draft = FeishuRowMapper.mapRow(row, columns, "7月").orElseThrow();
+
+        assertThat(draft.brandQuote()).isEqualTo("800");
+        assertThat(draft.finalCooperationPrice()).isEqualByComparingTo(new BigDecimal("1000"));
+    }
 }
