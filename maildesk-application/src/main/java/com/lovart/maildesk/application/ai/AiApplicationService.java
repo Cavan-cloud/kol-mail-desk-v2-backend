@@ -64,7 +64,7 @@ public class AiApplicationService {
 
     public AiTranslateResult translate(AiTranslateRequest request) {
         TranslateTargetLang target = TranslateTargetLang.fromApiValue(request.targetLang());
-        TranslateMode mode = target == TranslateTargetLang.EN ? TranslateMode.SEND_DRAFT : TranslateMode.EMAIL_BODY;
+        TranslateMode mode = target.isSendDraftTarget() ? TranslateMode.SEND_DRAFT : TranslateMode.EMAIL_BODY;
         TranslateTextResult result = ai.translateText(new TranslateTextRequest(request.text(), target, mode));
         return new AiTranslateResult(
                 result.translated(),

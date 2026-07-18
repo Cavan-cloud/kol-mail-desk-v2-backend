@@ -6,6 +6,7 @@ import com.lovart.maildesk.ai.classify.EmailClassificationParser;
 import com.lovart.maildesk.ai.draft.ReplyDraftParser;
 import com.lovart.maildesk.ai.fallback.AiInvocationPipeline;
 import com.lovart.maildesk.ai.prompt.AiPromptCatalog;
+import com.lovart.maildesk.ai.config.DeepSeekChatOptions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,9 @@ public class AiAutoConfiguration {
                     .build();
             ChatModel chatModel = OpenAiChatModel.builder()
                     .openAiApi(openAiApi)
-                    .defaultOptions(OpenAiChatOptions.builder().build())
+                    .defaultOptions(DeepSeekChatOptions.PROVIDER_ID.equals(providerId)
+                            ? DeepSeekChatOptions.defaultProviderOptions()
+                            : OpenAiChatOptions.builder().build())
                     .build();
             chatModels.put(providerId, chatModel);
             log.info("[ai] provider '{}' registered (base-url={})", providerId, provider.getBaseUrl());

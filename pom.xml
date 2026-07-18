@@ -30,7 +30,7 @@
 
         <spring-boot.version>3.3.7</spring-boot.version>
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
-        <spring-ai.version>1.0.0</spring-ai.version>
+        <spring-ai.version>1.1.8</spring-ai.version>
         <archunit.version>1.4.0</archunit.version>
 
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>

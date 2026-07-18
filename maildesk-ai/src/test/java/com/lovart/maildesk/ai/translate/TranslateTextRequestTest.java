@@ -24,6 +24,9 @@ class TranslateTextRequestTest {
     @Test
     void parsesTargetLangFromApiValue() {
         assertThat(TranslateTargetLang.fromApiValue("en")).isEqualTo(TranslateTargetLang.EN);
+        assertThat(TranslateTargetLang.fromApiValue("ko")).isEqualTo(TranslateTargetLang.KO);
         assertThat(TranslateTargetLang.fromApiValue(null)).isEqualTo(TranslateTargetLang.ZH);
+        assertThat(TranslateTargetLang.KO.isSendDraftTarget()).isTrue();
+        assertThat(TranslateTargetLang.ZH.isSendDraftTarget()).isFalse();
     }
 }

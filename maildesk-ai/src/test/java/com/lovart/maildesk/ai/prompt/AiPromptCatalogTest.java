@@ -47,6 +47,9 @@ class AiPromptCatalogTest {
     void translatePromptsMatchLegacyIntent() {
         assertThat(catalog.systemPrompt(AiPromptKey.TRANSLATE_ZH_TO_EN))
                 .contains("native-level English");
+        assertThat(catalog.systemPrompt(AiPromptKey.TRANSLATE_ZH_TO_KO))
+                .contains("Korean Hangul")
+                .contains("Never output Chinese characters");
         assertThat(catalog.systemPrompt(AiPromptKey.TRANSLATE_EMAIL_TO_ZH))
                 .contains("Do not summarize");
     }

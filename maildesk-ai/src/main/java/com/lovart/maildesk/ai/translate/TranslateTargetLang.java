@@ -5,7 +5,8 @@ package com.lovart.maildesk.ai.translate;
  */
 public enum TranslateTargetLang {
     ZH,
-    EN;
+    EN,
+    KO;
 
     public String apiValue() {
         return name().toLowerCase();
@@ -15,6 +16,15 @@ public enum TranslateTargetLang {
         if (value == null || value.isBlank()) {
             return ZH;
         }
-        return value.equalsIgnoreCase("en") ? EN : ZH;
+        return switch (value.trim().toLowerCase()) {
+            case "en" -> EN;
+            case "ko" -> KO;
+            default -> ZH;
+        };
+    }
+
+    /** Outbound send-draft translations (Chinese editor → final confirm draft). */
+    public boolean isSendDraftTarget() {
+        return this == EN || this == KO;
     }
 }

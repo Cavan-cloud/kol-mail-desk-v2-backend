@@ -58,6 +58,14 @@ class AiApplicationServiceTest {
         assertThat(result.targetLang()).isEqualTo("en");
     }
 
+    @Test
+    void translate_usesSendDraftModeForKorean() {
+        var result = service.translate(new AiTranslateRequest("你好", "ko"));
+
+        assertThat(result.translated()).isEqualTo("Hello");
+        assertThat(result.targetLang()).isEqualTo("ko");
+    }
+
     private static final class StubAiService extends AiService {
         StubAiService() {
             super(null, null, null, null, null, null);

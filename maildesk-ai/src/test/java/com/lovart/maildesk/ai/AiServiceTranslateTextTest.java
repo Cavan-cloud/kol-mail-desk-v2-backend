@@ -121,6 +121,22 @@ class AiServiceTranslateTextTest {
     }
 
     @Test
+    void translateTextUsesKoreanPromptForKoTarget() {
+        when(moonshotModel.call(any(Prompt.class))).thenReturn(llmResponse("안녕하세요, 팀입니다."));
+
+        TranslateTextRequest request = new TranslateTextRequest(
+                "你好，团队", TranslateTargetLang.KO, TranslateMode.SEND_DRAFT);
+        TranslateTextResult result = aiService.translateText(request);
+
+        assertThat(result.translated()).isEqualTo("안녕하세요, 팀입니다.");
+        assertThat(result.targetLang()).isEqualTo(TranslateTargetLang.KO);
+        ArgumentCaptor<Prompt> captor = ArgumentCaptor.forClass(Prompt.class);
+        verify(moonshotModel).call(captor.capture());
+        assertThat(captor.getValue().getInstructions().get(0).getText())
+                .contains("Korean Hangul");
+    }
+
+    @Test
     void translateTextFallsBackToSecondaryProvider() {
         when(moonshotModel.call(any(Prompt.class))).thenThrow(new RuntimeException("429"));
         when(deepseekModel.call(any(Prompt.class))).thenReturn(llmResponse("中文译文"));

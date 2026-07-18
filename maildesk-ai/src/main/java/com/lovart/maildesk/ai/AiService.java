@@ -36,6 +36,7 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import com.lovart.maildesk.ai.config.DeepSeekChatOptions;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.ResponseFormat;
 import org.springframework.stereotype.Service;
@@ -133,8 +134,7 @@ public class AiService {
         try {
             String systemPrompt = promptCatalog.systemPrompt(AiPromptKey.CLASSIFY_EMAIL);
             String userPayload = buildClassifyUserPayload(request);
-            OpenAiChatOptions options = OpenAiChatOptions.builder()
-                    .model(target.model())
+            OpenAiChatOptions options = DeepSeekChatOptions.builder(target)
                     .temperature(0.1)
                     .responseFormat(ResponseFormat.builder()
                             .type(ResponseFormat.Type.JSON_OBJECT)
@@ -164,8 +164,7 @@ public class AiService {
         try {
             String systemPrompt = promptCatalog.systemPrompt(AiPromptKey.REPLY_DRAFT);
             String userPayload = buildReplyDraftUserPayload(request);
-            OpenAiChatOptions options = OpenAiChatOptions.builder()
-                    .model(target.model())
+            OpenAiChatOptions options = DeepSeekChatOptions.builder(target)
                     .temperature(0.3)
                     .responseFormat(ResponseFormat.builder()
                             .type(ResponseFormat.Type.JSON_OBJECT)
@@ -193,8 +192,7 @@ public class AiService {
         try {
             String systemPrompt = promptCatalog.systemPrompt(AiPromptKey.CHECK_DRAFT);
             String userPayload = buildCheckDraftUserPayload(request);
-            OpenAiChatOptions options = OpenAiChatOptions.builder()
-                    .model(target.model())
+            OpenAiChatOptions options = DeepSeekChatOptions.builder(target)
                     .temperature(0.1)
                     .responseFormat(ResponseFormat.builder()
                             .type(ResponseFormat.Type.JSON_OBJECT)
@@ -220,13 +218,15 @@ public class AiService {
     private AiInvocationAttempt<TranslateTextResult> invokeTranslate(AiResolvedTarget target, TranslateTextRequest request) {
         long started = System.currentTimeMillis();
         try {
-            AiPromptKey promptKey = request.targetLang() == TranslateTargetLang.EN
-                    ? AiPromptKey.TRANSLATE_ZH_TO_EN
-                    : AiPromptKey.TRANSLATE_EMAIL_TO_ZH;
+            AiPromptKey promptKey = switch (request.targetLang()) {
+                case EN -> AiPromptKey.TRANSLATE_ZH_TO_EN;
+                case KO -> AiPromptKey.TRANSLATE_ZH_TO_KO;
+                case ZH -> AiPromptKey.TRANSLATE_EMAIL_TO_ZH;
+            };
             String systemPrompt = promptCatalog.systemPrompt(promptKey);
             String userPayload = buildTranslateUserPayload(request);
             String model = TranslateModelSelector.selectModel(target.model(), request.text().length());
-            OpenAiChatOptions options = OpenAiChatOptions.builder()
+            OpenAiChatOptions options = DeepSeekChatOptions.builder(target)
                     .model(model)
                     .temperature(0.2)
                     .build();

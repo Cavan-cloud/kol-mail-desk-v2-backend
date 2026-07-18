@@ -10,6 +10,7 @@ public enum AiPromptKey {
     REPLY_DRAFT("prompts/reply-draft.st"),
     CHECK_DRAFT("prompts/check-draft.st"),
     TRANSLATE_ZH_TO_EN("prompts/translate-zh-to-en.st"),
+    TRANSLATE_ZH_TO_KO("prompts/translate-zh-to-ko.st"),
     TRANSLATE_EMAIL_TO_ZH("prompts/translate-email-to-zh.st");
 
     private final String classpathLocation;
