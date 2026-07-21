@@ -146,6 +146,36 @@ class GmailSendExecutorTest {
     }
 
     @Test
+    void execute_doesNotStealExistingKolOwnerOnSend() {
+        UUID existingOwner = UUID.randomUUID();
+        KolDO kol = new KolDO();
+        kol.setId(kolId);
+        kol.setOwnerUserId(existingOwner);
+        when(kols.selectById(kolId)).thenReturn(kol);
+        when(credentials.hasCredential(userId)).thenReturn(true);
+        when(credentials.hasGmailSendScope(userId)).thenReturn(true);
+        when(credentials.resolveAccessToken(userId)).thenReturn(Optional.of(new GoogleAccessToken("access-token")));
+        when(gmailClient.sendMessage(eq("access-token"), any(GmailOutboundMessage.class)))
+                .thenReturn(new GmailSentMessage("msg-2", "thread-2"));
+        ProfileDO profile = new ProfileDO();
+        profile.setEmail("sender@company.com");
+        when(profiles.selectById(userId)).thenReturn(profile);
+        doAnswer(invocation -> {
+            EmailDO email = invocation.getArgument(0);
+            email.setId(UUID.randomUUID());
+            return 1;
+        }).when(emails).insert(any(EmailDO.class));
+
+        SendEmailResultDto result = executor.execute(userId, sampleRequest(null));
+
+        assertThat(result.status()).isEqualTo("sent");
+        ArgumentCaptor<KolDO> kolCaptor = ArgumentCaptor.forClass(KolDO.class);
+        verify(kols).updateById(kolCaptor.capture());
+        assertThat(kolCaptor.getValue().getOwnerUserId()).isNull();
+        assertThat(kolCaptor.getValue().getLastOutboundAt()).isNotNull();
+    }
+
+    @Test
     void execute_rejectsUnreviewedRequest() {
         SendEmailRequest request = new SendEmailRequest(
                 kolId, "to@example.com", List.of(), "Subject", "Body", null, null, null, false);

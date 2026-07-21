@@ -23,6 +23,8 @@ config:
   deepseekBaseUrl: https://api.deepseek.com
   # false = Gmail sync skips LLM classification (direction-only needs-reply)
   gmailAiClassificationEnabled: "false"
+  # own_only | leader_only | non_intern — who may read emails synced by other operators
+  crossMailboxVisibility: non_intern
   corsAllowedOrigins: ""
   webRedirectUrl: ""
   sessionCookieSecure: "true"

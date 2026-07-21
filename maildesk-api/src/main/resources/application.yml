@@ -119,6 +119,12 @@ maildesk:
     read-timeout: 30s
     max-retries: 3
 
+  workbench:
+    # own_only | leader_only | non_intern
+    # non_intern（默认）：除实习生外可读他人 Gmail 同步的邮件；实习生仍仅看自己邮箱。
+    # leader_only：仅 Leader 可读跨邮箱；own_only：人人仅看自己（旧行为）。
+    cross-mailbox-visibility: ${WORKBENCH_CROSS_MAILBOX_VISIBILITY:non_intern}
+
   gmail:
     client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
     client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}

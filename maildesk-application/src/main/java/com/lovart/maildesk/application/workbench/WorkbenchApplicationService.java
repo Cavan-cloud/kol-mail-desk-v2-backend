@@ -1,17 +1,21 @@
 package com.lovart.maildesk.application.workbench;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.lovart.maildesk.application.config.WorkbenchProperties;
 import com.lovart.maildesk.application.dto.KolDetailDto;
 import com.lovart.maildesk.application.dto.PageMetaDto;
 import com.lovart.maildesk.application.dto.WorkbenchKolDto;
 import com.lovart.maildesk.application.dto.WorkbenchResponseDto;
 import com.lovart.maildesk.application.dto.WorkbenchSidebarStatsDto;
+import com.lovart.maildesk.application.support.EmailDedupe;
+import com.lovart.maildesk.application.support.EmailVisibilityPolicy;
 import com.lovart.maildesk.application.support.EntityMappers;
 import com.lovart.maildesk.application.support.StageCatalog;
 import com.lovart.maildesk.application.support.WorkbenchRules;
 import com.lovart.maildesk.common.enums.EmailDirection;
 import com.lovart.maildesk.common.enums.KolStage;
 import com.lovart.maildesk.common.enums.KolStatus;
+import com.lovart.maildesk.common.enums.UserRole;
 import com.lovart.maildesk.common.exception.BusinessException;
 import com.lovart.maildesk.domain.email.entity.EmailDO;
 import com.lovart.maildesk.domain.email.mapper.EmailMapper;
@@ -36,18 +40,27 @@ import java.util.stream.Collectors;
 @Service
 public class WorkbenchApplicationService {
 
-    private static final int EMAIL_FETCH_LIMIT = 500;
+    private static final int EMAIL_FETCH_LIMIT = 5000;
     private static final int DEFAULT_PAGE_SIZE = 50;
     private static final int MAX_PAGE_SIZE = 200;
 
     private final KolMapper kols;
     private final EmailMapper emails;
     private final ProfileMapper profiles;
+    private final WorkbenchProperties workbenchProperties;
+    private final EmailVisibilityPolicy emailVisibilityPolicy;
 
-    public WorkbenchApplicationService(KolMapper kols, EmailMapper emails, ProfileMapper profiles) {
+    public WorkbenchApplicationService(
+            KolMapper kols,
+            EmailMapper emails,
+            ProfileMapper profiles,
+            WorkbenchProperties workbenchProperties,
+            EmailVisibilityPolicy emailVisibilityPolicy) {
         this.kols = kols;
         this.emails = emails;
         this.profiles = profiles;
+        this.workbenchProperties = workbenchProperties;
+        this.emailVisibilityPolicy = emailVisibilityPolicy;
     }
 
     @Transactional(readOnly = true)
@@ -66,11 +79,10 @@ public class WorkbenchApplicationService {
         List<KolDO> kolRows = loadKolsForView(viewMode, userId);
         long scopedTotal = countKolsForView(viewMode, userId);
 
-        List<EmailDO> emailRows = emails.selectList(
-                new LambdaQueryWrapper<EmailDO>()
-                        .eq(EmailDO::getUserId, userId)
-                        .orderByDesc(EmailDO::getSentAt)
-                        .last("LIMIT " + EMAIL_FETCH_LIMIT));
+        boolean crossMailbox = canViewCrossMailbox(userId);
+        List<UUID> kolIds = kolRows.stream().map(KolDO::getId).toList();
+        List<EmailDO> emailRows = EmailDedupe.dedupeForViewer(
+                loadEmailsForList(userId, crossMailbox, kolIds), userId);
 
         Map<UUID, String> ownerNames = loadOwnerNames();
         Map<UUID, List<EmailDO>> emailsByKol = groupEmailsByKol(emailRows);
@@ -104,11 +116,14 @@ public class WorkbenchApplicationService {
         if (kol == null) {
             throw new BusinessException("NOT_FOUND", "达人不存在");
         }
-        List<EmailDO> timeline = emails.selectList(
-                new LambdaQueryWrapper<EmailDO>()
-                        .eq(EmailDO::getKolId, kolId)
-                        .eq(EmailDO::getUserId, userId)
-                        .orderByDesc(EmailDO::getSentAt));
+        boolean crossMailbox = canViewCrossMailbox(userId);
+        LambdaQueryWrapper<EmailDO> wrapper = new LambdaQueryWrapper<EmailDO>()
+                .eq(EmailDO::getKolId, kolId)
+                .orderByDesc(EmailDO::getSentAt);
+        if (!crossMailbox) {
+            wrapper.eq(EmailDO::getUserId, userId);
+        }
+        List<EmailDO> timeline = EmailDedupe.dedupeForViewer(emails.selectList(wrapper), userId);
 
         String ownerName = resolveOwnerName(kol.getOwnerUserId());
         return new KolDetailDto(
@@ -116,6 +131,26 @@ public class WorkbenchApplicationService {
                 ownerName,
                 timeline.stream().map(EntityMappers::toEmailDto).toList()
         );
+    }
+
+    private boolean canViewCrossMailbox(UUID userId) {
+        ProfileDO profile = profiles.selectById(userId);
+        UserRole role = profile == null ? UserRole.MEMBER : UserRole.fromDbValue(profile.getRole());
+        return emailVisibilityPolicy.canViewCrossMailbox(role, workbenchProperties.visibilityMode());
+    }
+
+    private List<EmailDO> loadEmailsForList(UUID userId, boolean crossMailbox, List<UUID> kolIds) {
+        if (kolIds.isEmpty()) {
+            return List.of();
+        }
+        LambdaQueryWrapper<EmailDO> wrapper = new LambdaQueryWrapper<EmailDO>()
+                .in(EmailDO::getKolId, kolIds)
+                .orderByDesc(EmailDO::getSentAt)
+                .last("LIMIT " + EMAIL_FETCH_LIMIT);
+        if (!crossMailbox) {
+            wrapper.eq(EmailDO::getUserId, userId);
+        }
+        return emails.selectList(wrapper);
     }
 
     private List<KolDO> loadKolsForView(String viewMode, UUID userId) {

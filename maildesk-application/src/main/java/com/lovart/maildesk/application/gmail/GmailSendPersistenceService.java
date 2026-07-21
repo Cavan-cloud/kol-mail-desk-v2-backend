@@ -79,10 +79,14 @@ public class GmailSendPersistenceService {
         row.setReadAt(now);
         emails.insert(row);
 
+        KolDO existingKol = kols.selectById(request.kolId());
         KolDO kolPatch = new KolDO();
         kolPatch.setId(request.kolId());
         kolPatch.setLastOutboundAt(now);
-        kolPatch.setOwnerUserId(userId);
+        // Claim owner only when unassigned — do not steal another operator's KOL on cross-mailbox reply.
+        if (existingKol == null || existingKol.getOwnerUserId() == null) {
+            kolPatch.setOwnerUserId(userId);
+        }
         kols.updateById(kolPatch);
 
         if (request.templateId() != null) {
